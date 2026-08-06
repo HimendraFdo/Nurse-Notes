@@ -4,11 +4,15 @@ import SYSTEM_PROMPT from '../../prompts/system-prompt.txt?raw'
 
 export { SYSTEM_PROMPT }
 
-// Same-origin path: the Vite proxy (vite.config.js) forwards `/v1/*` to the
-// local LM Studio server, avoiding the cross-origin CORS preflight. To bypass
-// the proxy and hit LM Studio directly, set this to 'http://localhost:1234/v1'
-// (requires CORS enabled in LM Studio).
-export const DEFAULT_BASE_URL = '/v1'
+// Under `npm run dev`, the Vite proxy (vite.config.js) forwards same-origin
+// `/v1/*` to LM Studio, avoiding the cross-origin CORS preflight. That proxy
+// doesn't exist when the single-file build is opened directly (`file://` or
+// a static host with no backend), so fall back to hitting LM Studio
+// directly there — this requires CORS enabled in LM Studio for that mode.
+export const DEFAULT_BASE_URL =
+  typeof window !== 'undefined' && window.location.protocol === 'file:'
+    ? 'http://localhost:1234/v1'
+    : '/v1'
 export const DEFAULT_MODEL = 'google/gemma-3n-e4b'
 
 // Stream a rewrite. `onToken(delta)` is called with each text chunk.

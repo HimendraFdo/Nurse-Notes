@@ -1,5 +1,8 @@
-# Nurse Notes — Project Brief & Build Context
+# ClearChart — Project Brief & Build Context
 
+> Formerly named "Nurse Notes" during early ideation — renamed to ClearChart;
+> "Nurse Notes" no longer appears below.
+>
 > Drop this file at the root of the repo. Claude Code reads `CLAUDE.md`
 > automatically as project context. Rename to `PROJECT_BRIEF.md` if you'd
 > rather it not be auto-loaded.
@@ -8,7 +11,7 @@
 
 ## 1. What this is
 
-**Nurse Notes** is an AI tool that rewrites hospital discharge summaries and
+**ClearChart** is an AI tool that rewrites hospital discharge summaries and
 consent forms into plain language (target ~6th-grade reading level), with a
 **mandatory clinician review gate** before anything reaches a patient.
 
@@ -41,8 +44,9 @@ The rewrite behaviour is working today in **LM Studio** (local inference).
 - **Behaviour confirmed good:** correctly expands clinical shorthand
   (TDS/OD/BD/SOB/haemoptysis/melaena), keeps all medicines + doses accurate,
   correctly identifies which meds are new, preserves the anticoagulant bleeding
-  warning, and honestly emits `[flag for nurse review]` when the source doesn't
-  state something (e.g. activity limits).
+  warning, converts NZ time shorthand including `/24`, `/12`, the `x` prefix,
+  and compounds (`3kg/10/7`), and separates patient-facing instructions from
+  staff-only notes (e.g. "hold ramipril if Cr rises >20%").
 
 ### Known, INTENTIONAL limitation — do not "fix" silently
 The small model misreads NZ date shorthand: `6/52` (= 6 weeks) comes out as
@@ -55,41 +59,31 @@ corrects it to "6 weeks", and approves. Do not remove this behaviour or hide
 it. (If a cleaner rewrite is wanted, swap to a larger model — see §5 — but the
 gate stays either way.)
 
+### Known regression from the prompt rewrite — not yet fixed
+When "Activity limits" is absent from the source, the model now sometimes
+fabricates "Your doctor may have limited the amount of activity you can do"
+instead of correctly flagging it for nurse review. The prior prompt handled
+this case correctly; the broader real-record coverage in the current prompt
+(see §3) introduced this regression. Left in place — the clinician gate
+catches it — but do not describe this as "fixed" in the pitch or docs.
+
 ---
 
-## 3. The system prompt (verbatim — this is the product logic)
+## 3. The system prompt (this is the product logic)
 
-```
-You are a clinical-communication assistant. Rewrite the hospital
-discharge summary the user gives you into plain language at a
-6th-grade reading level.
+Rewritten against a real-format Waikato outpatient clinic record, not just
+the synthetic sample — broader input types (discharge summary, clinic
+record, letter, consent form), fuller NZ shorthand disambiguation (`/24`,
+`/12`, the `x` prefix, compounds like `3kg/10/7`, and non-time slashes like
+`2/2` = "because of"), a full glossary of shorthand actually seen in these
+records, and an explicit rule to separate patient-facing instructions from
+staff-only notes. Adds two new output headings: "Why you were seen" and
+"Looking after yourself at home" (the original five headings are preserved).
 
-Rules:
-- Only use information present in the source. Never add facts or advice.
-- Output these sections, in order, with these exact headings:
-  Your medicines and what changed
-  Warning signs — call someone now
-  Follow-up appointments
-  Activity limits
-  Who to call
-- Keep every clinical fact exactly as stated in the source.
-- If something is unclear or missing, write "[flag for nurse review]"
-  instead of guessing.
-- Short sentences. No jargon. Define any medical term you must keep.
-
-NZ time shorthand — convert EXACTLY like this:
-  6/52 -> "6 weeks"     2/52 -> "2 weeks"     1/52 -> "1 week"
-  5/7  -> "5 days"      3/7  -> "3 days"
-The number before the slash is the count. The number after the slash
-(52 or 7) is the UNIT ONLY: 52 means weeks, 7 means days. Never treat
-the slash as division and never add extra days.
-
-Return only the rewritten summary.
-```
-
-> Note: the small model still ignores the shorthand rule sometimes (see §2).
-> Store this prompt in the repo at `prompts/system-prompt.txt` as the single
-> source of truth so the web app and LM Studio use the same text.
+Full text lives at `prompts/system-prompt.txt` — that file is the single
+source of truth the web app and LM Studio both read from; do not let this
+doc drift from it. See §2 for the one known regression this rewrite
+introduced.
 
 ---
 
@@ -231,7 +225,7 @@ From the repo directory:
 ```bash
 # place this file as CLAUDE.md at the repo root, then:
 git add CLAUDE.md
-git commit -m "Add Nurse Notes project brief and build context"
+git commit -m "Add ClearChart project brief and build context"
 git push
 ```
 
