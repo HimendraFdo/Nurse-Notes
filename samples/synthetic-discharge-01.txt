@@ -1,0 +1,33 @@
+Waikato Hospital — Discharge Summary
+[SYNTHETIC TEST DOCUMENT — not a real patient]
+
+Patient: Aroha Ngata (fictional)   NHI: ZZZ9999   DOB: 14/03/1958  Age 68
+Ward: M3   Consultant: Dr S. Patel
+Admitted: 28/07/2026   Discharged: 02/08/2026
+
+Dx: 1. Community-acquired pneumonia (RLL)  2. T2DM (poorly controlled, HbA1c 74)
+3. New AF  4. CKD stage 3a
+
+PC: 4/7 productive cough, fevers, increasing SOB. O/E febrile 38.7, sats 89% RA,
+RR 24, crackles R base.
+
+Ix: CXR RLL consolidation. CRP 187, WCC 15.2, eGFR 52, Trop neg. ECG AF ~110bpm.
+
+Mgmt: IV ceftriaxone 1g OD 3/7 then switched PO. Rate control w/ bisoprolol.
+Commenced apixaban for AF (CHA2DS2-VASc 4). Metformin held during admission,
+restarted on d/c.
+
+Meds on discharge:
+- Amoxicillin 500mg TDS PO — 5/7 course, complete it
+- Bisoprolol 2.5mg OD (NEW)
+- Apixaban 5mg BD (NEW) — do not stop without advice, bleeding risk
+- Metformin 1g BD (unchanged)
+- Atorvastatin 40mg nocte (unchanged)
+
+F/U: Repeat CXR in 6/52 via GP. Anticoag clinic r/v 2/52. GP recheck renal fn 1/52.
+Cardiology OPA re AF — letter to follow.
+
+Safety-net: return if worsening SOB, chest pain, haemoptysis, or signs of bleeding
+(melaena, bruising). Diabetic education referral made.
+
+Clinician: Dr J. Lee, House Officer
