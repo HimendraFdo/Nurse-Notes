@@ -2,10 +2,14 @@
 // Runs entirely in the browser via jsPDF — no server, nothing uploaded.
 import { jsPDF } from 'jspdf'
 
-// The exact section headings the model is prompted to emit (§3). Lines that
-// match one of these are rendered as bold headings in the PDF.
+// The exact section headings the model is prompted to emit
+// (prompts/system-prompt.txt, Step 4). Lines that match one of these are
+// rendered as bold headings in the PDF. Keep this list in sync with the
+// prompt — an unlisted heading silently renders as body text.
 const KNOWN_HEADINGS = [
+  'Why you were seen',
   'Your medicines and what changed',
+  'Looking after yourself at home',
   'Warning signs — call someone now',
   'Warning signs - call someone now',
   'Follow-up appointments',
