@@ -16,6 +16,9 @@ STEP 1 — READ THE WHOLE DOCUMENT FIRST (silently)
 ====================================================================
 Before writing anything, find these. Some will be missing. That is normal.
 
+  - THE ANCHOR DATE. This is the date the patient left hospital ("Discharged"),
+    or if there is none, the date of the clinic visit ("Date/Time"). It is near
+    the top of the document. You need it to work out appointment dates.
   - Why the patient was seen, and what the doctor concluded
   - Every medicine: name, dose, how often, and whether it is NEW, STOPPED,
     CHANGED (dose up or down), or UNCHANGED
@@ -52,6 +55,38 @@ SLASHES THAT DO NOT MEAN TIME — leave the meaning alone
   148/86    = a blood pressure reading
   Na / K 138 / 4.2 = two separate test results
   40mg -> 60mg = a dose change, not a date
+
+TURN EVERY FOLLOW-UP INTERVAL INTO A REAL CALENDAR DATE
+A patient cannot work out "in 6 weeks" from a date they have forgotten. Give
+them the actual day.
+
+  1. Take the ANCHOR DATE you found in Step 1.
+  2. Add the interval to it. A week is 7 days. Count the days carefully and
+     carry over into the next month properly.
+  3. Write the date as DD/MM/YYYY, then the interval in brackets.
+
+  Worked example. Anchor date = discharged 02/08/2026:
+
+    "Anticoag clinic r/v 2/52"
+        2 weeks = 14 days. 02/08 + 14 days = 16/08/2026.
+        -> "16/08/2026 (2 weeks after you left hospital)"
+
+    "GP recheck renal fn 1/52"
+        1 week = 7 days. 02/08 + 7 days = 09/08/2026.
+        -> "09/08/2026 (1 week after you left hospital)"
+
+    "Repeat CXR in 6/52"
+        6 weeks = 42 days. August has 31 days, so 02/08 + 29 days = 31/08,
+        and 13 days remain. 02/08 + 42 days = 13/09/2026.
+        -> "13/09/2026 (6 weeks after you left hospital)"
+
+ALWAYS keep the interval in brackets after the date. The nurse uses it to
+check your arithmetic. A date on its own cannot be checked.
+
+If there is NO anchor date in the document:
+    [flag for nurse review: no discharge or clinic date given]
+If an appointment has NO interval (e.g. "letter to follow", "OPA TBC"):
+    say a letter or phone call will come, and do not invent a date.
 
 DOSE TIMING
   OD / mane = once a day in the morning     nocte = at night
@@ -133,7 +168,10 @@ each with its status in capitals: NEW, STOPPED, DOSE CHANGED, or UNCHANGED.
 Say what the medicine is for ONLY if the document says.
 
 Under "Follow-up appointments", include future tests, scans and referrals as
-well as appointments. Give the timing in plain words ("in 2 weeks").
+well as appointments. Start each one with its calendar date, worked out as in
+Step 2, followed by the interval in brackets. For example:
+
+  - 16/08/2026 (2 weeks after you left hospital) — blood-thinner clinic check.
 
 ====================================================================
 STEP 5 — CHECK BEFORE YOU ANSWER (silently)
@@ -141,6 +179,8 @@ STEP 5 — CHECK BEFORE YOU ANSWER (silently)
   - Every medicine, dose and frequency matches the source exactly.
   - Every /24, /7, /52 and /12 has been converted, and no "2/2", date, or
     blood pressure has been treated as a length of time.
+  - Every follow-up has a DD/MM/YYYY date with the interval in brackets, and
+    each date was counted from the anchor date, not guessed.
   - Nothing has been added that is not in the source.
   - No staff-only instruction has been handed to the patient.
   - Every heading is present.
