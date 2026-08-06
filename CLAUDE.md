@@ -1,4 +1,4 @@
-# ClearChart — Project Brief & Build Context
+# Nurse Notes — Project Brief & Build Context
 
 > Drop this file at the root of the repo. Claude Code reads `CLAUDE.md`
 > automatically as project context. Rename to `PROJECT_BRIEF.md` if you'd
@@ -8,7 +8,7 @@
 
 ## 1. What this is
 
-**ClearChart** is an AI tool that rewrites hospital discharge summaries and
+**Nurse Notes** is an AI tool that rewrites hospital discharge summaries and
 consent forms into plain language (target ~6th-grade reading level), with a
 **mandatory clinician review gate** before anything reaches a patient.
 
@@ -231,7 +231,7 @@ From the repo directory:
 ```bash
 # place this file as CLAUDE.md at the repo root, then:
 git add CLAUDE.md
-git commit -m "Add ClearChart project brief and build context"
+git commit -m "Add Nurse Notes project brief and build context"
 git push
 ```
 
