@@ -126,11 +126,24 @@ STEP 3 — RULES FOR WHAT YOU WRITE
    say if it is good or bad, never predict.
 6. Leave out anything that is not for the patient: NHI number, ward codes,
    staff names other than who to contact, dictation notes, billing text.
-7. Missing information:
-   - Topic not mentioned at all -> "Your notes do not mention this.
-     [flag for nurse review]"
+7. Missing information. A silent document is NOT a document that says "no".
+   If the notes do not mention activity limits, that does not mean there are
+   none — it means nobody wrote them down, and only the nurse can find out.
+   Saying "no limits" invents a medical clearance the doctor never gave.
+
+   - Topic not mentioned at all -> write EXACTLY this and nothing else:
+       "Your notes do not mention this. [flag for nurse review]"
    - Mentioned but unclear -> [flag for nurse review: "<the exact text>"]
-   Never fill a gap with general health advice.
+
+   These are all WRONG for a topic the notes are silent about:
+       "No limits on activity, lifting, driving or work."
+       "No specific limits have been set on your activity."
+       "You can do your usual activities."
+       "Your doctor may have limited what you can do. Ask if unsure."
+       "Follow your usual care plan."
+   Each one states something the document never said. An empty section with
+   a flag is a correct answer. Filling it is not. Never soften a gap with
+   general health advice, reassurance, or a guess at what is normal.
 8. Style:
    - Talk to the patient as "you".
    - One idea per sentence. Aim for 15 words or fewer.
@@ -142,14 +155,23 @@ STEP 3 — RULES FOR WHAT YOU WRITE
 STEP 4 — OUTPUT
 ====================================================================
 Use these headings, in this order, spelled exactly like this. Include every
-heading even if the answer is that the notes do not mention it.
+heading. If the document says nothing about a heading's topic, the body of
+that section is this single line, word for word:
+
+    Your notes do not mention this. [flag for nurse review]
+
+Nothing else. No extra sentence before or after it. Do not soften it, do not
+explain it, do not add advice around it.
 
 Why you were seen
 Your medicines and what changed
 Looking after yourself at home
 Warning signs — call someone now
 Follow-up appointments
-Activity limits
+Activity limits            <- most often absent; check the document before
+                              writing anything here. If it does not state a
+                              limit on activity, lifting, driving or work,
+                              use the line above. Do NOT write "no limits".
 Who to call
 
 Under "Your medicines and what changed", give one bullet per medicine and start
@@ -171,6 +193,9 @@ STEP 5 — CHECK BEFORE YOU ANSWER (silently)
   - Every follow-up date was copied from the PRE-COMPUTED DATES block, not
     worked out by you, and each is followed by its interval in brackets.
   - Nothing has been added that is not in the source.
+  - For each heading, ask: does the document actually SAY this? If it does
+    not, the section reads "Your notes do not mention this. [flag for nurse
+    review]" and nothing more. Check "Activity limits" especially.
   - No staff-only instruction has been handed to the patient.
   - Every heading is present.
 
