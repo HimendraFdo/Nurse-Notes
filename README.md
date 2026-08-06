@@ -101,19 +101,36 @@ The gate stays either way.
 | Rewrite behaviour in LM Studio | Working |
 | System prompt (`prompts/system-prompt.txt`) | Defined — see `CLAUDE.md` §3 |
 | Synthetic sample document | Defined — see `CLAUDE.md` §7 |
-| Clinician review screen | **Next to build** |
+| Clinician review screen | **Built** (Vite + React) |
 
-## What gets built next
+## The review screen (built)
 
-A single self-contained review screen:
+A two-pane clinician review app (Vite + React), running fully offline
+against local LM Studio:
 
-- **Left pane** — the original clinical text (paste or upload)
-- **Right pane** — the plain-language rewrite, **editable** by the clinician
-- **Reading-grade badges** on both panes (Flesch–Kincaid, computed client-side)
-- **"Nurse review required before release"** banner, visible until approval
-- **Approve for release** — locks the text, stamps a timestamp and nurse name
+- **Left pane — Original** — the clinical text. Paste, or upload `.txt` /
+  `.md` / `.pdf` (PDF parsed locally with pdf.js — nothing uploaded).
+- **Right pane — Plain Language** — the plain-language rewrite, streamed from
+  LM Studio and **editable** so the clinician can correct it.
+- **"Nurse review required before release"** banner, visible until approval.
+- **Approve for release** — locks the text, stamps a timestamp and nurse name.
+- **Export patient PDF** — generates the patient-facing PDF in-browser
+  (jsPDF), enabled only after approval.
 
-Full requirements are in [`CLAUDE.md`](CLAUDE.md) §6.
+### A note on the reading-level badges
+
+The brief (§6) asked for a Flesch–Kincaid grade on both panes. In practice FK
+measures only sentence and word *length*, so it rates telegraphic clinical
+shorthand (`SOB`, `6/52`, `2.5mg OD`) as "easy" — often lower-grade than the
+plain-language prose, which is the opposite of a patient's experience. So the
+badges were split to tell an honest story:
+
+- **Original** shows a **jargon count** — the pieces of clinical shorthand a
+  patient can't decode (the sample scores 61).
+- **Plain Language** shows the **Flesch–Kincaid grade** against the 6th-grade
+  target (a good rewrite lands at ≈6 with a ✓).
+
+Both are computed client-side, no external API.
 
 ### Explicitly out of scope
 
@@ -124,11 +141,26 @@ rewrites anywhere. Local demo only. The gate is manual by design.
 
 ## Running it
 
+**1. Start the local model (LM Studio)**
+
 1. Install [LM Studio](https://lmstudio.ai/) and download `google/gemma-3n-e4b`.
 2. Set **Temperature 0.25** (under Settings, not Sampling).
 3. **Developer tab → Start Server.** This exposes an OpenAI-compatible API at
    `http://localhost:1234/v1` — no API key needed locally.
-4. Open the review screen and click **Generate**.
+
+**2. Start the review screen**
+
+```bash
+npm install
+npm run dev
+```
+
+Open the printed URL (default `http://localhost:5173`), click **Load sample**
+(or paste / upload a document), then **Generate**. Correct the rewrite,
+enter your name, **Approve for release**, and **Export patient PDF**.
+
+To swap models (e.g. Qwen 3 8B for cleaner output), use the **Settings** panel
+in the app, or edit the defaults in `src/lib/llm.js`.
 
 Full API details and a minimal `fetch` example are in [`CLAUDE.md`](CLAUDE.md) §4.
 
@@ -139,7 +171,16 @@ Full API details and a minimal `fetch` example are in [`CLAUDE.md`](CLAUDE.md) �
 ```
 README.md                          this file
 CLAUDE.md                          project brief & build context
-index.html                         the clinician review screen
+index.html                         Vite entry point
+package.json                       dependencies & scripts
+vite.config.js                     build config (relative base, offline)
+src/main.jsx                       React entry
+src/App.jsx                        the clinician review screen
+src/styles.css                     styling
+src/lib/llm.js                     LM Studio client (streams the rewrite)
+src/lib/extractText.js             .txt / .md / .pdf text extraction (pdf.js)
+src/lib/readability.js             Flesch–Kincaid + clinical-jargon counter
+src/lib/pdf.js                     patient PDF generator (jsPDF)
 prompts/system-prompt.txt          single source of truth for the prompt
 samples/synthetic-discharge-01.txt synthetic test document
 ```
