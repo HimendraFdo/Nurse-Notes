@@ -1,29 +1,12 @@
 import { useMemo, useRef, useState } from 'react'
 import { generateRewrite, DEFAULT_BASE_URL, DEFAULT_MODEL } from './lib/llm.js'
 import { extractText } from './lib/extractText.js'
-import { readingGrade, gradeLabel, countJargon } from './lib/readability.js'
+import { countJargon } from './lib/readability.js'
 import { downloadPatientPdf } from './lib/pdf.js'
 import { submitRecord, parsePatientMeta } from './lib/records.js'
 import MarkdownEditor from './components/MarkdownEditor.jsx'
 import PatientView from './PatientView.jsx'
 import SAMPLE_TEXT from '../samples/synthetic-discharge-01.txt?raw'
-
-export function GradeBadge({ text }) {
-  const grade = useMemo(() => readingGrade(text), [text])
-  if (grade == null) return <span className="badge badge--empty">—</span>
-  const level = gradeLabel(grade)
-  const meetsTarget = grade <= 6
-  return (
-    <span
-      className={`badge badge--${level.replace(/\s+/g, '-')}`}
-      title={`Flesch–Kincaid reading grade ${grade} (${level}). Target for patients: 6th grade or below.`}
-    >
-      {meetsTarget && <span className="badge__tick" aria-hidden="true">✓</span>}
-      <strong>{grade}</strong>
-      <span className="badge__unit">grade</span>
-    </span>
-  )
-}
 
 function JargonBadge({ text }) {
   const { count, unique } = useMemo(() => countJargon(text), [text])
@@ -159,8 +142,6 @@ export default function App() {
         approvedAt: approved.at,
         plainText: rewrite,
         originalText: original,
-        readingGrade: readingGrade(rewrite),
-        jargonCount: countJargon(original).count,
       })
       setSubmitState('sent')
     } catch (err) {
@@ -305,7 +286,6 @@ export default function App() {
         <section className="pane pane--plain">
           <div className="pane__head">
             <h2>Plain Language</h2>
-            <GradeBadge text={rewrite} />
           </div>
           <div className="pane__toolbar">
             {isGenerating ? (

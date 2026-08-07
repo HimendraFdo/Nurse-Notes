@@ -553,6 +553,9 @@ body {
   justify-content: space-between;
   gap: 8px;
 }
+.phone__badge-row--end {
+  justify-content: flex-end;
+}
 .phone__listen {
   white-space: nowrap;
 }

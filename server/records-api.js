@@ -106,8 +106,6 @@ function makeMiddleware(root) {
           approvedAt: incoming.approvedAt || '',
           plainText: String(incoming.plainText),
           originalText: String(incoming.originalText || ''),
-          readingGrade: incoming.readingGrade ?? null,
-          jargonCount: incoming.jargonCount ?? null,
         }
         const records = readRecords(file)
         records.push(record)

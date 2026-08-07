@@ -276,9 +276,6 @@ function RecordsList({ records, loading, error, onRefresh, onOpen }) {
                 <Ionicons name="shield-checkmark" size={11} color={COLORS.primary} />
                 <Text style={styles.approvedPillText}>Approved</Text>
               </View>
-              {r.readingGrade != null && (
-                <Text style={styles.recordGrade}>Grade {r.readingGrade} reading level</Text>
-              )}
             </View>
             <Text style={styles.recordWhen}>{formatWhen(r.submittedAt)}</Text>
           </View>
@@ -417,17 +414,12 @@ function RecordDetail({ record }) {
             <Markdown text={record.plainText} />
           </View>
 
-          {record.readingGrade != null && (
-            <View style={styles.footerBadge}>
-              <MaterialCommunityIcons name="book-open-variant" size={14} color={COLORS.subtext} />
-              <Text style={styles.footerBadgeText}>
-                Simplified to Grade {record.readingGrade} Reading Level
-                {record.jargonCount != null
-                  ? ` · Reduced from ${record.jargonCount} Jargon Terms`
-                  : ''}
-              </Text>
-            </View>
-          )}
+          <View style={styles.footerBadge}>
+            <MaterialCommunityIcons name="book-open-variant" size={14} color={COLORS.subtext} />
+            <Text style={styles.footerBadgeText}>
+              Rewritten in plain language · Reviewed by your care team
+            </Text>
+          </View>
         </View>
       ) : (
         <View>
@@ -583,7 +575,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginLeft: 4,
   },
-  recordGrade: { fontSize: 11, color: COLORS.subtext, fontWeight: '600' },
   recordWhen: { fontSize: 12, color: COLORS.subtext, marginTop: 6 },
 
   noticeCard: {

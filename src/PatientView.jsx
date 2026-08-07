@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { GradeBadge } from './App.jsx'
 
 // The patient-facing mobile view: what the patient actually sees on their
 // phone after the clinician approves. Two ways to get the text onto the
@@ -73,8 +72,7 @@ export default function PatientView({ rewrite, approved, onBack }) {
             </div>
           </header>
 
-          <div className="phone__badge-row">
-            <GradeBadge text={rewrite} />
+          <div className="phone__badge-row phone__badge-row--end">
             <button
               className="btn btn--sm btn--ghost phone__listen"
               onClick={toggle}
