@@ -3,6 +3,7 @@ import { generateRewrite, DEFAULT_BASE_URL, DEFAULT_MODEL } from './lib/llm.js'
 import { extractText } from './lib/extractText.js'
 import { readingGrade, gradeLabel, countJargon } from './lib/readability.js'
 import { downloadPatientPdf } from './lib/pdf.js'
+import MarkdownEditor from './components/MarkdownEditor.jsx'
 import PatientView from './PatientView.jsx'
 import SAMPLE_TEXT from '../samples/synthetic-discharge-01.txt?raw'
 
@@ -287,13 +288,11 @@ export default function App() {
             )}
             {isGenerating && <span className="spinner" aria-label="Generating" />}
           </div>
-          <textarea
-            className="pane__text"
-            placeholder="The plain-language rewrite will appear here. It is editable — correct anything the model got wrong before approving."
+          <MarkdownEditor
             value={rewrite}
-            onChange={(e) => setRewrite(e.target.value)}
+            onChange={setRewrite}
             readOnly={isApproved}
-            spellCheck={false}
+            placeholder="The plain-language rewrite will appear here, formatted. It is editable — correct anything the model got wrong before approving."
           />
         </section>
       </main>

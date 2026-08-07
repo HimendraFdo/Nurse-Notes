@@ -240,6 +240,73 @@ body {
   color: #37484c;
 }
 
+/* WYSIWYG markdown editor (right pane) */
+.md-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.md-editor {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  overflow-y: auto;
+  width: 100%;
+}
+.md-editor:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--mint);
+}
+.md-editor[contenteditable='false'] {
+  background: #f7f6f1;
+  color: #37484c;
+}
+.md-editor h1,
+.md-editor h2,
+.md-editor h3 {
+  margin: 14px 0 6px;
+  line-height: 1.3;
+  color: var(--teal-dark);
+}
+.md-editor h1 {
+  font-size: 19px;
+}
+.md-editor h2 {
+  font-size: 17px;
+}
+.md-editor h3 {
+  font-size: 15px;
+}
+.md-editor p {
+  margin: 0 0 8px;
+}
+.md-editor strong {
+  font-weight: 700;
+}
+.md-editor em {
+  font-style: italic;
+}
+.md-editor ul,
+.md-editor ol {
+  margin: 6px 0 10px;
+  padding-left: 22px;
+}
+.md-editor li {
+  margin: 3px 0;
+}
+.md-editor > *:first-child {
+  margin-top: 0;
+}
+.md-placeholder {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  color: var(--muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
 /* Reading-grade badge */
 .badge {
   display: inline-flex;

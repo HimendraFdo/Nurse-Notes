@@ -22,6 +22,18 @@ function isHeading(line) {
   return KNOWN_HEADINGS.some((h) => t.toLowerCase() === h.toLowerCase())
 }
 
+// Remove inline markdown markers so no literal ** _ ` # leak into the PDF.
+function stripInline(s) {
+  return s
+    .replace(/^#{1,6}\s*/, '') // leading heading hashes
+    .replace(/\*\*(.+?)\*\*/g, '$1') // **bold**
+    .replace(/(^|[^*])\*(?!\*)([^*]+?)\*(?!\*)/g, '$1$2') // *italic*
+    .replace(/__(.+?)__/g, '$1') // __bold__
+    .replace(/(^|[^_])_(?!_)([^_]+?)_(?!_)/g, '$1$2') // _italic_
+    .replace(/`([^`]+?)`/g, '$1') // `code`
+    .trim()
+}
+
 export function buildPatientPdf({ text, nurseName, approvedAt }) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const margin = 56
@@ -71,14 +83,32 @@ export function buildPatientPdf({ text, nurseName, approvedAt }) {
       y += 18
       continue
     }
+
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
-    const wrapped = doc.splitTextToSize(line, maxWidth)
-    for (const wl of wrapped) {
-      newPageIfNeeded(15)
-      doc.text(wl, margin, y)
-      y += 15
+
+    // Bullet list item? Render a real bullet with a hanging indent. Leading
+    // whitespace marks nesting depth (turndown indents nested items).
+    const bullet = line.match(/^(\s*)[-*+]\s+(.*)$/)
+    let x = margin
+    let content = line
+    let bulletChar = ''
+    if (bullet) {
+      const depth = Math.floor(bullet[1].length / 2)
+      x = margin + 14 + depth * 14
+      content = bullet[2]
+      bulletChar = '•  '
     }
+
+    content = stripInline(content)
+    const bulletWidth = bulletChar ? doc.getTextWidth(bulletChar) : 0
+    const wrapped = doc.splitTextToSize(content, maxWidth - (x - margin) - bulletWidth)
+    wrapped.forEach((wl, i) => {
+      newPageIfNeeded(15)
+      if (i === 0 && bulletChar) doc.text(bulletChar, x, y)
+      doc.text(wl, x + bulletWidth, y) // hanging indent aligns wrapped lines
+      y += 15
+    })
   }
 
   // Approval footer on every page

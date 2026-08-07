@@ -1,8 +1,11 @@
-# Nurse Notes
+# ClearChart
 
 **Plain-language hospital discharge summaries, with a nurse in the loop.**
 
-Nurse Notes rewrites hospital discharge summaries and consent forms into plain
+> Formerly named "Nurse Notes" during early ideation — hence the repository
+> name. The project is called ClearChart.
+
+ClearChart rewrites hospital discharge summaries and consent forms into plain
 language (target ~6th-grade reading level) using a small language model that
 runs entirely on the local machine. Nothing is released to a patient until a
 clinician has reviewed, corrected, and approved it.
@@ -111,11 +114,17 @@ against local LM Studio:
 - **Left pane — Original** — the clinical text. Paste, or upload `.txt` /
   `.md` / `.pdf` (PDF parsed locally with pdf.js — nothing uploaded).
 - **Right pane — Plain Language** — the plain-language rewrite, streamed from
-  LM Studio and **editable** so the clinician can correct it.
+  LM Studio into a **formatted WYSIWYG editor** so the clinician can correct it
+  in place.
 - **"Nurse review required before release"** banner, visible until approval.
 - **Approve for release** — locks the text, stamps a timestamp and nurse name.
+- **View on patient's phone** — the approved summary as the patient sees it,
+  with a QR code that carries the text itself (nothing fetched over a network).
 - **Export patient PDF** — generates the patient-facing PDF in-browser
   (jsPDF), enabled only after approval.
+
+`npm run build` inlines everything into a single `dist/index.html` — open it
+straight from disk, no server required.
 
 ### A note on the reading-level badges
 
@@ -176,6 +185,8 @@ package.json                       dependencies & scripts
 vite.config.js                     build config (relative base, offline)
 src/main.jsx                       React entry
 src/App.jsx                        the clinician review screen
+src/PatientView.jsx                patient-facing view + QR code
+src/components/MarkdownEditor.jsx  WYSIWYG editor for the rewrite pane
 src/styles.css                     styling
 src/lib/llm.js                     LM Studio client (streams the rewrite)
 src/lib/extractText.js             .txt / .md / .pdf text extraction (pdf.js)
@@ -183,6 +194,8 @@ src/lib/readability.js             Flesch–Kincaid + clinical-jargon counter
 src/lib/pdf.js                     patient PDF generator (jsPDF)
 prompts/system-prompt.txt          single source of truth for the prompt
 samples/synthetic-discharge-01.txt synthetic test document
+mmh-mobile/                        companion Expo / React Native app
+docs/                              pitch deck & hackathon material
 ```
 
 ---
