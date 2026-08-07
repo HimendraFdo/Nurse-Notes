@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { marked } from 'marked'
 import TurndownService from 'turndown'
+import { promoteHeadings } from '../lib/headings.js'
 
 // Markdown is the source of truth (used by the reading-grade badge and the PDF
 // export). This editor renders it as real formatting the nurse can edit inline,
@@ -23,7 +24,7 @@ export default function MarkdownEditor({ value, onChange, readOnly, placeholder 
   useEffect(() => {
     const el = ref.current
     if (!el || document.activeElement === el) return
-    const html = value ? marked.parse(value) : ''
+    const html = value ? marked.parse(promoteHeadings(value)) : ''
     if (el.innerHTML !== html) el.innerHTML = html
   }, [value])
 
