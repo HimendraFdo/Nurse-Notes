@@ -414,6 +414,22 @@ body {
 .approve .btn--lg {
   margin-left: auto;
 }
+.approve .btn--lg ~ .btn--lg,
+.approve .btn--lg ~ .submit-status {
+  margin-left: 0;
+}
+
+.submit-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 0 4px;
+}
+.submit-status--sent {
+  color: var(--ok-ink, #0f766e);
+}
 
 /* Error */
 .error {

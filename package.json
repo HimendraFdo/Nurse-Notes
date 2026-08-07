@@ -1,11 +1,11 @@
 {
-  "name": "clearchart",
+  "name": "nurse-notes",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "description": "Clinician review screen for plain-language discharge summaries. Runs fully offline against local LM Studio.",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host --port 5199 --strictPort",
     "build": "vite build",
     "preview": "vite preview"
   },

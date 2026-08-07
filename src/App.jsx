@@ -3,6 +3,7 @@ import { generateRewrite, DEFAULT_BASE_URL, DEFAULT_MODEL } from './lib/llm.js'
 import { extractText } from './lib/extractText.js'
 import { readingGrade, gradeLabel, countJargon } from './lib/readability.js'
 import { downloadPatientPdf } from './lib/pdf.js'
+import { submitRecord, parsePatientMeta } from './lib/records.js'
 import MarkdownEditor from './components/MarkdownEditor.jsx'
 import PatientView from './PatientView.jsx'
 import SAMPLE_TEXT from '../samples/synthetic-discharge-01.txt?raw'
@@ -52,6 +53,10 @@ export default function App() {
   const [approved, setApproved] = useState(null) // { nurseName, at }
   const [nurseName, setNurseName] = useState('')
 
+  // Submission to the patient phone app (the local records store).
+  const [submitState, setSubmitState] = useState('idle') // idle | submitting | sent | error
+  const [submitError, setSubmitError] = useState('')
+
   const [showSettings, setShowSettings] = useState(false)
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL)
   const [model, setModel] = useState(DEFAULT_MODEL)
@@ -83,6 +88,8 @@ export default function App() {
     setStatus('idle')
     setApproved(null)
     setView('clinician')
+    setSubmitState('idle')
+    setSubmitError('')
   }
 
   async function handleGenerate() {
@@ -136,6 +143,34 @@ export default function App() {
   function handleUnlock() {
     setApproved(null)
     setView('clinician')
+    setSubmitState('idle')
+    setSubmitError('')
+  }
+
+  async function handleSubmit() {
+    if (!isApproved || submitState === 'submitting') return
+    setSubmitState('submitting')
+    setSubmitError('')
+    try {
+      const meta = parsePatientMeta(original)
+      await submitRecord({
+        ...meta,
+        approvedBy: approved.nurseName,
+        approvedAt: approved.at,
+        plainText: rewrite,
+        originalText: original,
+        readingGrade: readingGrade(rewrite),
+        jargonCount: countJargon(original).count,
+      })
+      setSubmitState('sent')
+    } catch (err) {
+      setSubmitState('error')
+      setSubmitError(
+        `${err.message}\n\nThis sends to the local Nurse Notes store on this ` +
+          `machine. Make sure the app is running under \`npm run dev\` (the store ` +
+          `lives on the dev server); it is not available in the static single-file build.`,
+      )
+    }
   }
 
   function handleExport() {
@@ -154,7 +189,7 @@ export default function App() {
           <div className="app__brand">
             <span className="app__logo" aria-hidden="true">✚</span>
             <div>
-              <h1>ClearChart</h1>
+              <h1>Nurse Notes</h1>
               <p className="app__tagline">Patient view — what the patient sees on their phone</p>
             </div>
           </div>
@@ -173,7 +208,7 @@ export default function App() {
         <div className="app__brand">
           <span className="app__logo" aria-hidden="true">✚</span>
           <div>
-            <h1>ClearChart</h1>
+            <h1>Nurse Notes</h1>
             <p className="app__tagline">Clinician review — plain-language discharge summaries</p>
           </div>
         </div>
@@ -324,12 +359,27 @@ export default function App() {
             <button className="btn btn--ghost btn--lg" onClick={() => setView('patient')}>
               View on patient's phone
             </button>
-            <button className="btn btn--primary btn--lg" onClick={handleExport}>
+            <button className="btn btn--ghost btn--lg" onClick={handleExport}>
               Export patient PDF
             </button>
+            {submitState === 'sent' ? (
+              <span className="submit-status submit-status--sent" role="status">
+                ✓ Sent to patient app
+              </span>
+            ) : (
+              <button
+                className="btn btn--primary btn--lg"
+                onClick={handleSubmit}
+                disabled={submitState === 'submitting'}
+              >
+                {submitState === 'submitting' ? 'Submitting…' : 'Submit to patient app'}
+              </button>
+            )}
           </>
         )}
       </section>
+
+      {submitError && <pre className="error">{submitError}</pre>}
 
       <footer className="app__footer">
         Runs entirely on this device. No data leaves your machine.
