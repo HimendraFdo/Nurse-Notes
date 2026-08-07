@@ -3,17 +3,13 @@
 import SYSTEM_PROMPT from '../../prompts/system-prompt.txt?raw'
 import { buildDateBrief } from './dates.js'
 
-export { SYSTEM_PROMPT }
-
 // Under `npm run dev`, the Vite proxy (vite.config.js) forwards same-origin
 // `/v1/*` to LM Studio, avoiding the cross-origin CORS preflight. That proxy
 // doesn't exist when the single-file build is opened directly (`file://` or
 // a static host with no backend), so fall back to hitting LM Studio
 // directly there — this requires CORS enabled in LM Studio for that mode.
 export const DEFAULT_BASE_URL =
-  typeof window !== 'undefined' && window.location.protocol === 'file:'
-    ? 'http://localhost:1234/v1'
-    : '/v1'
+  window.location.protocol === 'file:' ? 'http://localhost:1234/v1' : '/v1'
 export const DEFAULT_MODEL = 'google/gemma-3n-e4b'
 
 // Stream a rewrite. `onToken(delta)` is called with each text chunk.

@@ -11,16 +11,20 @@ const KNOWN_HEADINGS = [
   'Your medicines and what changed',
   'Looking after yourself at home',
   'Warning signs — call someone now',
-  'Warning signs - call someone now',
   'Follow-up appointments',
   'Activity limits',
   'Who to call',
 ]
 
-function isHeading(line) {
-  const t = line.trim().replace(/[:*#]/g, '').trim()
-  return KNOWN_HEADINGS.some((h) => t.toLowerCase() === h.toLowerCase())
-}
+// Markdown markers removed — this is what actually gets drawn.
+const stripMarkers = (line) => line.replace(/[:*#]/g, '').trim()
+
+// Additionally dash- and space-normalised for matching only, so a heading the
+// nurse retyped as `## Warning signs - call someone now` still matches.
+const headingKey = (line) =>
+  stripMarkers(line).replace(/[–—]/g, '-').replace(/\s+/g, ' ').toLowerCase()
+
+const HEADING_KEYS = new Set(KNOWN_HEADINGS.map(headingKey))
 
 // Remove inline markdown markers so no literal ** _ ` # leak into the PDF.
 function stripInline(s) {
@@ -34,7 +38,7 @@ function stripInline(s) {
     .trim()
 }
 
-export function buildPatientPdf({ text, nurseName, approvedAt }) {
+function buildPatientPdf({ text, nurseName, approvedAt }) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const margin = 56
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -74,12 +78,12 @@ export function buildPatientPdf({ text, nurseName, approvedAt }) {
       y += 8
       continue
     }
-    if (isHeading(line)) {
+    if (HEADING_KEYS.has(headingKey(line))) {
       y += 6
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(13)
       newPageIfNeeded(18)
-      doc.text(line.trim().replace(/[:*#]/g, '').trim(), margin, y)
+      doc.text(stripMarkers(line), margin, y)
       y += 18
       continue
     }
