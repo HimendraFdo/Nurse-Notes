@@ -1,30 +1,9 @@
 // Build the patient-facing PDF from the approved plain-language text.
 // Runs entirely in the browser via jsPDF — no server, nothing uploaded.
 import { jsPDF } from 'jspdf'
-
-// The exact section headings the model is prompted to emit
-// (prompts/system-prompt.txt, Step 4). Lines that match one of these are
-// rendered as bold headings in the PDF. Keep this list in sync with the
-// prompt — an unlisted heading silently renders as body text.
-const KNOWN_HEADINGS = [
-  'Why you were seen',
-  'Your medicines and what changed',
-  'Looking after yourself at home',
-  'Warning signs — call someone now',
-  'Follow-up appointments',
-  'Activity limits',
-  'Who to call',
-]
-
-// Markdown markers removed — this is what actually gets drawn.
-const stripMarkers = (line) => line.replace(/[:*#]/g, '').trim()
-
-// Additionally dash- and space-normalised for matching only, so a heading the
-// nurse retyped as `## Warning signs - call someone now` still matches.
-const headingKey = (line) =>
-  stripMarkers(line).replace(/[–—]/g, '-').replace(/\s+/g, ' ').toLowerCase()
-
-const HEADING_KEYS = new Set(KNOWN_HEADINGS.map(headingKey))
+// Shared with the on-screen editor so the two renderers agree on what counts
+// as a section heading — see src/lib/headings.js.
+import { isKnownHeading, stripMarkers } from './headings.js'
 
 // Remove inline markdown markers so no literal ** _ ` # leak into the PDF.
 function stripInline(s) {
@@ -78,7 +57,7 @@ function buildPatientPdf({ text, nurseName, approvedAt }) {
       y += 8
       continue
     }
-    if (HEADING_KEYS.has(headingKey(line))) {
+    if (isKnownHeading(line)) {
       y += 6
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(13)
