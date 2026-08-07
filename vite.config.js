@@ -21,6 +21,6 @@ const proxy = {
 export default defineConfig({
   base: './',
   plugins: [react(), viteSingleFile()],
-  server: { proxy },
+  server: { proxy, port: Number(process.env.PORT) || 5173 },
   preview: { proxy },
 })

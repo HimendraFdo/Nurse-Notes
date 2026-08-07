@@ -1,16 +1,15 @@
 // Flesch–Kincaid grade level, computed client-side. No external API.
 // Grade = 0.39*(words/sentences) + 11.8*(syllables/words) - 15.59
 
-function countSyllablesInWord(word) {
-  word = word.toLowerCase().replace(/[^a-z]/g, '')
+function countSyllablesInWord(raw) {
+  const word = raw.toLowerCase().replace(/[^a-z]/g, '')
   if (!word) return 0
   if (word.length <= 3) return 1
 
-  // Drop common silent endings.
-  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '')
-  word = word.replace(/^y/, '')
+  // Drop common silent endings, and a leading y (a consonant in that position).
+  const stem = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '')
 
-  const groups = word.match(/[aeiouy]{1,2}/g)
+  const groups = stem.match(/[aeiouy]{1,2}/g)
   return groups ? groups.length : 1
 }
 
@@ -23,7 +22,7 @@ function countSentences(text) {
 
   // A sentence ends at . ! ? followed by whitespace or end of text.
   const matches = cleaned.match(/[.!?]+(?:\s|$)/g)
-  return Math.max(matches ? matches.length : 0, 1)
+  return Math.max(matches?.length ?? 0, 1)
 }
 
 export function readingGrade(text) {
@@ -48,7 +47,6 @@ export function readingGrade(text) {
 
 // Human label for a grade number, used in badge tooltips.
 export function gradeLabel(grade) {
-  if (grade == null) return ''
   if (grade <= 6) return 'plain language'
   if (grade <= 9) return 'moderate'
   return 'complex'
@@ -88,14 +86,15 @@ function escapeRe(s) {
 const LB = '(?<![A-Za-z0-9])'
 const RB = '(?![A-Za-z0-9])'
 
-const ACRONYM_RE = new RegExp(
-  LB + '(?:' + ACRONYMS.slice().sort((a, b) => b.length - a.length).map(escapeRe).join('|') + ')' + RB,
-  'g',
-)
-const WORD_RE = new RegExp(LB + '(?:' + JARGON_WORDS.map(escapeRe).join('|') + ')' + RB, 'gi')
+// Longest alternative first, so multi-part shorthand (CHA2DS2-VASc) wins over
+// the shorter acronyms it starts with.
+const byLengthDesc = [...ACRONYMS].sort((a, b) => b.length - a.length)
+
+const ACRONYM_RE = new RegExp(`${LB}(?:${byLengthDesc.map(escapeRe).join('|')})${RB}`, 'g')
+const WORD_RE = new RegExp(`${LB}(?:${JARGON_WORDS.map(escapeRe).join('|')})${RB}`, 'gi')
 // NZ time shorthand (6/52, 5/7) and concatenated doses (2.5mg, 1g, 500mcg).
 const PATTERN_RE = new RegExp(
-  LB + '(?:\\d+\\/(?:52|7)|\\d+(?:\\.\\d+)?\\s?(?:mg|mcg|g|ml|units?))' + RB,
+  `${LB}(?:\\d+/(?:52|7)|\\d+(?:\\.\\d+)?\\s?(?:mg|mcg|g|ml|units?))${RB}`,
   'gi',
 )
 
