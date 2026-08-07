@@ -4,9 +4,10 @@ import { extractText } from './lib/extractText.js'
 import { readingGrade, gradeLabel, countJargon } from './lib/readability.js'
 import { downloadPatientPdf } from './lib/pdf.js'
 import MarkdownEditor from './components/MarkdownEditor.jsx'
+import PatientView from './PatientView.jsx'
 import SAMPLE_TEXT from '../samples/synthetic-discharge-01.txt?raw'
 
-function GradeBadge({ text }) {
+export function GradeBadge({ text }) {
   const grade = useMemo(() => readingGrade(text), [text])
   if (grade == null) return <span className="badge badge--empty">—</span>
   const level = gradeLabel(grade)
@@ -54,6 +55,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL)
   const [model, setModel] = useState(DEFAULT_MODEL)
+  const [view, setView] = useState('clinician') // 'clinician' | 'patient'
 
   const fileInputRef = useRef(null)
   const abortRef = useRef(null)
@@ -80,6 +82,7 @@ export default function App() {
     setRewrite('')
     setStatus('idle')
     setApproved(null)
+    setView('clinician')
   }
 
   async function handleGenerate() {
@@ -132,6 +135,7 @@ export default function App() {
 
   function handleUnlock() {
     setApproved(null)
+    setView('clinician')
   }
 
   function handleExport() {
@@ -143,13 +147,33 @@ export default function App() {
     })
   }
 
+  if (view === 'patient') {
+    return (
+      <div className="app">
+        <header className="app__header">
+          <div className="app__brand">
+            <span className="app__logo" aria-hidden="true">✚</span>
+            <div>
+              <h1>ClearChart</h1>
+              <p className="app__tagline">Patient view — what the patient sees on their phone</p>
+            </div>
+          </div>
+        </header>
+        <PatientView rewrite={rewrite} approved={approved} onBack={() => setView('clinician')} />
+        <footer className="app__footer">
+          Runs entirely on this device. No data leaves your machine.
+        </footer>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <header className="app__header">
         <div className="app__brand">
           <span className="app__logo" aria-hidden="true">✚</span>
           <div>
-            <h1>Nurse Notes</h1>
+            <h1>ClearChart</h1>
             <p className="app__tagline">Clinician review — plain-language discharge summaries</p>
           </div>
         </div>
@@ -164,8 +188,9 @@ export default function App() {
             LM Studio base URL
             <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} spellCheck={false} />
             <span className="settings__note">
-              Default <code>/v1</code> routes through the dev proxy (no CORS). Use the full
-              <code> http://localhost:1234/v1</code> only if you enable CORS in LM Studio.
+              Under <code>npm run dev</code> this routes through the dev-server proxy (no CORS
+              needed). In the single-file build it defaults to
+              <code> http://localhost:1234/v1</code> directly — enable CORS in LM Studio for that mode.
             </span>
           </label>
           <label>
@@ -295,9 +320,14 @@ export default function App() {
             Approve for release
           </button>
         ) : (
-          <button className="btn btn--primary btn--lg" onClick={handleExport}>
-            Export patient PDF
-          </button>
+          <>
+            <button className="btn btn--ghost btn--lg" onClick={() => setView('patient')}>
+              View on patient's phone
+            </button>
+            <button className="btn btn--primary btn--lg" onClick={handleExport}>
+              Export patient PDF
+            </button>
+          </>
         )}
       </section>
 

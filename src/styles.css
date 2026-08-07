@@ -466,3 +466,140 @@ body {
     margin-left: 0;
   }
 }
+
+/* Patient view — mobile phone mockup + QR panel */
+.patient {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 0 24px;
+}
+.patient__back {
+  align-self: flex-start;
+}
+
+.phone {
+  width: 320px;
+  max-width: 100%;
+  background: var(--ink);
+  border-radius: 36px;
+  padding: 14px 10px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.phone__notch {
+  width: 90px;
+  height: 18px;
+  background: var(--ink);
+  border-radius: 0 0 14px 14px;
+  margin: 0 auto 8px;
+}
+.phone__screen {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 420px;
+}
+.phone__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.phone__header strong {
+  display: block;
+  font-size: 15px;
+}
+.phone__logo {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 9px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.phone__sub {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.phone__badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.phone__listen {
+  white-space: nowrap;
+}
+.phone__body {
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.phone__text {
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  margin: 0;
+}
+.phone__empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.phone__footer {
+  color: var(--muted);
+  font-size: 11px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.qr-panel {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  text-align: center;
+}
+.qr-panel h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.qr-panel__hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+.qr-panel__code {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  width: fit-content;
+  margin: 0 auto;
+}
+.qr-panel__warn {
+  color: var(--warn-ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin: 14px 0 0;
+}

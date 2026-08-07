@@ -1,0 +1,422 @@
+================================================================================
+AI HACKATHON FESTIVAL 2026 - IDEATION
+University of Waikato | 2-day build | Teams of 3-7
+================================================================================
+
+JUDGING (four parts, weighted equally)
+  Inspiration   - a clear problem with real impact
+  Technology    - feasibility, quality, how you use AI
+  Design        - usability and originality
+  Presentation  - clear, structured, within 5 minutes
+
+PRIZES
+  $250    Local - best Waikato solution
+  $1,000  TAIAO - SDG alignment, feasibility, impact
+  $1,000  Technical Brilliance - technical thinking and prototype execution
+  Local winners go through to national judging.
+
+WHAT SCORES WELL
+  Judges reward execution over novelty. Working software aimed at a specific
+  group beats a clever idea that only half runs. A plain LLM wrapper no longer
+  stands out. Health and education chatbots are the most common entries, so
+  they are the hardest lane to win in.
+
+  One thing separates entries reliably: producing a number that maps to an
+  official UN indicator. It gives judges something concrete to check.
+
+CONTEXT
+  Only 16% of SDG targets are projected to be met by 2030. The UN's own count
+  puts 36% of 139 targets on track or progressing moderately. Four years left.
+
+  Two of the three problems suggested in the event PDF (Facilities Helpdesk,
+  Peer Support) are chatbot-shaped. Choosing one means competing mostly on
+  presentation.
+
+================================================================================
+IDEA 1 - COLD-CHAIN MONITOR FOR LAST-MILE CLINICS
+================================================================================
+
+PROBLEM
+Vaccines and insulin spoil quietly when a fridge fails or a transport box warms
+above 8 C. Rural clinics often find out only when the stock is already unusable.
+
+SDG 3 (Good Health). Protects the potency of health supplies reaching
+underserved patients. Indicator 3.b.1, vaccine coverage.
+
+WORTH KNOWING FIRST
+This device already exists commercially. Nexleaf ColdTrace X is WHO-prequalified
+and does everything an ESP32 rig would: ±0.5 C accuracy, BLE sensors, cellular
+or WiFi sync, five-year warranty, a backend running 15,000+ devices. Berlinger
+Fridge-tag is the standalone equivalent.
+
+But research on why cold chains fail points somewhere else. In one field study,
+91.7% of facilities had no cold chain policy and none had an equipment
+contingency plan. The alert fires and nobody knows who is meant to act. That
+gap is open.
+
+APPROACH
+Keep the ESP32 and temperature sensor, but treat it as the input, not the
+product. The product is what happens after an excursion is detected:
+
+  1. Dose disposition. The system reads the excursion - how long, how hot or
+     cold, which fridge - and checks it against vaccine stability rules to
+     recommend use, quarantine, or discard for each product, showing its
+     reasoning. Today this decision is made manually.
+  2. Escalation. Identifies who is on call, whether the immunisation
+     coordinator has been contacted, and drafts the incident record.
+  3. Tamper-evident log. Events are hash-stamped so a flagged batch cannot be
+     quietly un-flagged.
+
+NEW ZEALAND ANGLE
+  - The local process is CCA (Cold Chain Accreditation), run by the Ministry of
+    Health and valid up to three years. Pharmacies are audited separately by
+    Medicines Control.
+  - The 2017 National Standards are under review by Health NZ right now.
+  - Current interim rule: fridges over ten years old are allowed only with
+    continuous real-time monitoring and out-of-hours alarming. That is existing
+    demand for this, today.
+  - Freezing, not overheating, causes most vaccine damage in NZ.
+  - New Zealand's cold chain programme cut vaccine wastage from 17% to 2%
+    between 2002 and 2008, saving an estimated $4M a year.
+
+OFFLINE-FIRST
+Buffers locally, syncs on reconnect.
+
+WHY 48 HOURS WORKS
+The firmware is a read-sensor, append-log loop. The web layer is standard CRUD
+with a time-series chart. The decision layer is a prompt over a rules table, not
+a model you have to train.
+
+DEMO
+Put the probe in a cup of ice and pull it out mid-pitch. The dashboard flags the
+excursion, then the system produces a disposition recommendation and a drafted
+incident report on screen.
+
+RISKS
+  - Venue WiFi is unreliable. Use BLE-to-phone or a local access point as the
+    main sync path.
+  - Frame output as decision support pending coordinator sign-off, not as a
+    clinical ruling.
+  - Record a video of the excursion firing as a fallback.
+
+Solid if you pitch the decision layer. Weak if you pitch the logger.
+
+================================================================================
+IDEA 2 - SURPLUS MATCHING FOR GROWERS
+================================================================================
+
+PROBLEM
+Produce is culled before packing for cosmetic reasons and sold by the bin, not
+the bag. It never enters a retail inventory system, so no existing food-waste
+platform can see it. Meanwhile household food waste in NZ is already falling -
+12.2% to 10.9% of food bought, $3.2B to $3.0B - so the consumer end of the
+problem is shrinking while this end is not.
+
+SDG 12.3 (halve food waste) and SDG 2.1 (end hunger). Two indicators, one build.
+
+THE NUMBERS
+  - NZ Food Network and Lineage redirected over 1,000 pallets - about 635,000 kg
+    - of frozen vegetables rejected only for cosmetic irregularities.
+  - One in three NZ households faced food insecurity in the past year
+    (Hunger Monitor 2025, published March 2026).
+  - The burden is uneven: Pacific peoples 64%, Maori 51%, ages 18-24 50%.
+  - Only 44% of food-insecure households have ever accessed food relief.
+
+WHY THIS IS OPEN
+NZ food rescue matching is route-based and manual. NZFN's stated approach for
+bulk surplus is to act as a single point of contact - a human broker. Regular
+donors sit on fixed recurring routes.
+
+The existing apps solve adjacent problems: Olio is neighbour-to-neighbour,
+Too Good To Go and Flashfood work off retail shelves, Spoiler Alert handles
+packaged goods and inventory. Imperfect Foods and Misfits Market turned cosmetic
+rejects into a subscription box rather than a matching layer. None of them can
+see stock that is culled before it becomes inventory.
+
+APPROACH
+  1. A grower photographs a bin. A vision model grades the reject class and
+     estimates volume. Manual data entry is what stops growers participating,
+     so removing it matters more than it sounds.
+  2. A matcher scores allocations against shelf life, cold storage
+     availability, hub capacity, travel time, and need severity. This is a
+     scoring function, not a chatbot.
+  3. An impact ledger tracks kg diverted, meal equivalents, and CO2e avoided,
+     mapped to SDG 12.3.
+
+DOMAIN DETAIL
+The Food Act 2014 excludes food with compromised sanitary seals unless it is
+heated. Naming a real constraint like this shows you looked at the sector.
+
+SCALE
+64 food hubs, 2,000+ frontline groups, roughly 28 million meal equivalents a
+year already moving. You would be adding a layer to an existing network rather
+than building one.
+
+WHY 48 HOURS WORKS
+Vision grading is one API call with a rubric. A greedy allocator demos the same
+as an optimal one at this scale. The dashboard is CRUD, a map, and a chart.
+
+DEMO
+Photograph a crate of misshapen carrots. It gets graded, the matcher allocates
+across three mock hubs, and the ledger updates. Then mark a hub's chiller
+offline and let it reallocate.
+
+RISKS
+  - A two-sided marketplace with thin supply fails. Pitch it as a tool for one
+    broker who already has both sides, not as a marketplace.
+  - Position it as complementary to NZFN rather than competing.
+
+The best-balanced option: local data, a real gap, AI that is not a chatbot, two
+indicators, and a mechanism that works beyond NZ.
+
+================================================================================
+IDEA 3 - DISABILITY FUNDING REASSESSMENT TOOL
+================================================================================
+
+PROBLEM
+NZ's disability support funding is changing now, and the people affected cannot
+work out what it means for them. From 1 April 2026 existing NASC users get a set
+budget with a limit. From 1 October 2026 reassessments run under the new system.
+Budgets are based on past spending, so anyone who underspent during a
+restrictive period risks being held to that lower figure.
+
+SDG 10.2 (social and economic inclusion regardless of disability).
+
+WHY THE TIMING MATTERS
+  - Waikato is an EGL site. EGL Waikato and Mana Whaikaha whanau keep direct
+    funding. The event is inside the affected region and the judges are local.
+  - Reassessments start two months after the hackathon.
+  - The policy is actively contested. Blind Low Vision NZ has flagged clauses 7
+    and 8 of the Disability Support Services Bill 2026 as a step away from EGL
+    principles, framing support as "within available funding" and putting family
+    and community ahead of State support.
+  - CCS Disability Action says Budget 2026 squeezes community-based support
+    while protecting residential care.
+
+APPROACH
+  1. Budget simulator. Enter current supports, model the allocation under the
+     new past-spending rule, and show the difference - flagging where the old
+     March 2024 purchasing restrictions may have artificially lowered someone's
+     baseline. That is the specific harm advocates are warning about.
+  2. Evidence pack generator. Retrieval over the National Standards, the
+     February 2026 fact sheet, and EGL principles, producing a reassessment
+     submission with citations.
+  3. Plain-language layer. Turns clause text into readable summaries, and works
+     the other way too - putting a whanau's account into the assessor's terms.
+
+ACCESSIBILITY
+This is the one idea where accessibility is the product rather than a
+requirement to satisfy. WCAG 2.2 AA, screen-reader first, fully keyboard
+navigable. You have an accessibility skill installed with reference material.
+
+WHY 48 HOURS WORKS
+The simulator is arithmetic over a rules table. The evidence pack is retrieval
+over roughly 40 pages of public PDFs. No training, scraping, or authentication.
+
+DEMO
+Two personas side by side - one whose budget holds, one whose baseline was
+suppressed by the 2024 rules. Same tool, different outcomes, both explained.
+Then generate the second persona's evidence pack.
+
+RISKS
+  - You are modelling contested policy. Label outputs as indicative, not
+    determinations, and cite every rule to its source.
+  - Use synthetic personas only.
+  - Get the rules right or do not ship. A wrong number here affects real people,
+    and saying so in the pitch is worth more than hiding it.
+
+Strongest local resonance, and the only idea where the accessibility brief and
+the technical work are the same thing.
+
+================================================================================
+IDEA 4 - E-WASTE ROUTING
+================================================================================
+
+PROBLEM
+New Zealand produces about 99,000 tonnes of e-waste a year under voluntary
+schemes only. It is the OECD outlier - producer participation is not mandatory
+and there is no extended producer responsibility framework, unlike every other
+OECD country. The AS/NZS recycling standards exist but are not binding.
+
+SDG 12.5 (reduce waste generation). Indicator 12.5.1 is the national recycling
+rate, which NZ largely cannot report - and that is part of the story.
+
+THE GAP
+E-waste was designated a priority product requiring mandatory stewardship in
+2020. TechCollect NZ ran the co-design between 2020 and 2023. As of mid-2026 the
+regulations are still not in force and no implementation date is set. All six
+2020 priority product groups remain in consultation or drafting. Six years, and
+99,000 tonnes a year continues to flow.
+
+APPROACH
+  1. Drop-off guidance. Photograph a device; a vision model identifies the type
+     and hazardous components, then finds the nearest point that actually
+     accepts it. Right now this is confusing enough that people give up and
+     landfill it.
+  2. Repair before recycle. Route repairable devices to repair cafes and
+     refurbishers first. Recycling is the last step in the waste hierarchy, but
+     most tools skip straight to it.
+  3. Reporting ledger. Aggregate anonymised flows into the shape a regulated
+     scheme will eventually require, so the data model exists when regulations
+     land.
+
+LOW BANDWIDTH
+An SMS path that assumes no smartphone makes it usable in places where informal
+collectors do this work, which is where 12.5 is weakest globally.
+
+WHY 48 HOURS WORKS
+Vision identification is one API call. The list of accepting points is small
+enough to assemble by hand. The ledger is a schema and a chart.
+
+DEMO
+Photograph an old phone and a dead microwave. One routes to repair, one to a
+named recycler, and one is refused by the voluntary scheme entirely - that
+refusal gets logged as evidence of the policy gap.
+
+RISKS
+  - Frame the regulatory angle as a scheme-ready data model, not a claim to
+    influence policy.
+  - Curate the accepting-points list manually rather than building a scraper.
+
+Best reporting story of the five. Weakest emotional hook, so the pitch has to
+carry it.
+
+================================================================================
+IDEA 5 - NEIGHBOURHOOD SDG INDICATOR GENERATOR
+================================================================================
+
+PROBLEM
+The main gap in SDG 11 is measurement. Fewer than a third of sustainable-cities
+indicators have data at all, and coverage is worst at neighbourhood level and
+for vulnerable groups. HLPF 2026 called for urban data systems as a public good.
+
+SDG 11.7, access to safe and inclusive public space. Indicator 11.7.1 is the
+average share of built-up area that is open public space.
+
+THE NUMBERS
+  - Access to open public space fell from 48.0% to 45.9% between 2020 and 2025
+    across 414 cities in 126 countries. It is going backwards.
+  - About 1.1 billion people live in slums or slum-like conditions, with another
+    2 billion projected over 30 years.
+
+APPROACH
+  1. Compute rather than survey. Free satellite imagery, OpenStreetMap, and a
+     segmentation model estimate open public space share for a neighbourhood,
+     output in the form UN-Habitat's methodology expects.
+  2. Ground-truth layer. Residents contribute phone photos and a vision model
+     checks whether mapped public space is actually accessible - fenced, locked,
+     paved over, or usable. Satellites cannot see this.
+  3. Validate publicly. Run it on a city UN-Habitat has already measured and
+     show your estimate next to theirs. Judges can check you on the spot, which
+     few teams offer.
+
+WHY 48 HOURS WORKS
+A pre-trained segmentation model, OpenStreetMap via the Overpass API, one city,
+one indicator. The discipline is keeping it to exactly that.
+
+DEMO
+Run it on a Hamilton suburb and show the computed figure. Then show the resident
+photo layer downgrading a park that turns out to be fenced off, and explain why
+the satellite reading was wrong.
+
+RISKS
+  - Highest technical risk here. Segmentation quality is unpredictable and hard
+    to debug late on day two.
+  - Pre-compute the demo results and keep a cached fallback.
+  - Skip this unless someone on the team has done geospatial or computer vision
+    work before.
+
+Highest technical ceiling, highest chance of a broken demo.
+
+================================================================================
+COMPARISON
+================================================================================
+
+  #  Idea                     SDG          Novelty    48h risk  Emotion  Tech
+  1  Cold-chain decisions     3.b.1        Medium*    Low       High     Med
+  2  Grower surplus matching  12.3 + 2.1   High       Low       High     Med
+  3  Disability funding tool  10.2         High       Low       Highest  Med
+  4  E-waste routing          12.5         Med-high   Low       Low      Med
+  5  Indicator generator      11.7.1       High       High      Medium   High
+
+  * Medium only if pitched as the decision layer. Low if pitched as a logger,
+    since ColdTrace X already covers that.
+
+SUGGESTED PICKS
+  Best all round          #2
+  Best local resonance    #3
+  Best technical showing  #5
+  Safest hardware demo    #1, reframed
+
+  Worth weighing: the probe-in-ice moment in #1 is the most memorable few
+  seconds available to any team in the room, and a web app cannot match it. If
+  someone on the team does embedded work, keep the prop - just make sure the
+  software behind it is the decision layer.
+
+NOT INCLUDED
+  Rural volunteer transport matching was considered and dropped. Road XS,
+  Spedsta, and Assisted Rides already do it, and Hato Hone St John and the
+  Cancer Society already run the NZ services. Where it has been studied, the
+  bottleneck is human coordination, not the matching software.
+
+PRACTICAL NOTES
+  Teams split at noon on day two - half keep building, half prepare the pitch.
+  Agree who is on which side beforehand. The 30 minutes between the end of the
+  hack and the start of pitching is the only window to regroup.
+
+  Pitch structure, from the official template:
+    0:30  Connect  - who you are, what you care about
+    1:00  Problem  - who is affected, made human, with data
+    2:00  Big idea - how it solves the problem, plus the prototype
+    1:30  Impact   - what changes, what you need, what it means longer term
+
+  The template notes: describe the problem you are solving, which may not be
+  the one you set out to solve.
+
+================================================================================
+SOURCES
+================================================================================
+SDG
+  UN SDG Report 2026        https://unstats.un.org/sdgs/report/2026/
+  SDSN Report 2026          https://dashboards.sdgindex.org/
+  UN-Habitat SDG 11 2026    https://unhabitat.org/sdg-11-global-report-2026-housing-at-the-centre-of-sustainable-cities-and-communities
+
+COLD CHAIN
+  Health NZ standards       https://www.tewhatuora.govt.nz/health-services-and-programmes/vaccine-information/vaccine-service-delivery/cold-chain-standards-for-vaccines/
+  National Standards 2017   https://www.tewhatuora.govt.nz/assets/For-the-health-sector/Health-sector-guidance/Vaccine-information-for-healthcare-professionals/National-Standards-for-Vaccine-Storage-and-Transportation-for-Immunisation-Providers-2017-2nd-edition.pdf
+  IMAC cold chain           https://immune.org.nz/vaccines/cold-chain
+  Nexleaf ColdTrace         https://www.nexleaf.org/work/vaccines/
+
+FOOD
+  Hunger Monitor 2025       https://www.nzfoodnetwork.org.nz/wp-content/uploads/2026/03/NZFN-Hunger-Monitor-2025-Digital.pdf
+  NZFN impact stats         https://www.nzfoodnetwork.org.nz/our-impact/
+  NZFN + Lineage            https://www.nzfoodnetwork.org.nz/food-rescue-partnership-nz-food-network-lineage-grant/
+  Rabobank food waste       https://www.rabobank.co.nz/community/food-waste
+  PMCSA food rescue         https://www.pmcsa.ac.nz/topics/food-rescue-food-waste/
+
+DISABILITY
+  DSS Feb 2026 fact sheet   https://www.disabilitysupport.govt.nz/disabled-people/improvements-to-disability-support-services/february-2026-fact-sheet
+  Disability Strategy 26-30 https://www.whaikaha.govt.nz/assets/NZDS-26-30-Documents/NZDS-2026-2030.pdf
+  CCS Budget 2026           https://www.ccsdisabilityaction.org.nz/news/budget-2026-statement
+  Blind Low Vision NZ       https://blindlowvision.org.nz/news/submission-on-the-disability-support-services-bill-2026/
+
+E-WASTE
+  TechCollect NZ            https://techcollect.nz/e-waste-product-stewardship-new-zealand/
+  E-waste in NZ             https://en.wikipedia.org/wiki/Electronic_waste_in_New_Zealand
+
+DATA AND TOOLING
+  data.govt.nz APIs         https://data.govt.nz/catalogue-guide/using-data-govt-nz-apis
+  NZ AI Strategy            https://www.mbie.govt.nz/assets/new-zealands-strategy-for-artificial-intelligence.pdf
+
+JUDGING
+  GitLab AI Hackathon 2026  https://about.gitlab.com/blog/gitlab-ai-hackathon-2026-meet-the-winners/
+
+TECHNICAL NOTES
+  data.govt.nz documentation references CKAN 2.7, which is old. Check
+  /api/3/action/status_show before coding against those docs. The DataStore API
+  only exists where a clean CSV was supplied; many listings are metadata-only
+  links to agency sites.
+
+  Claude Sonnet 5 pricing rises to $3/$15 per million tokens after 31 Aug 2026.
+
+================================================================================
