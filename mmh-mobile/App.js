@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -8,7 +8,10 @@ import {
   View,
   Platform,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { NativeModules } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 
@@ -28,78 +31,77 @@ const COLORS = {
   newTag: '#0f766e',
 };
 
-// ---- Hardcoded patient data ------------------------------------------------
-const MEDICINES = [
-  {
-    name: 'Amoxicillin 500mg',
-    detail: '3x a day for 5 days — for infection',
-    status: null,
-  },
-  {
-    name: 'Bisoprolol 2.5mg',
-    detail: '1x a day — medicine for heart rate',
-    status: 'NEW',
-  },
-  {
-    name: 'Apixaban 5mg',
-    detail: '2x a day — medicine to prevent blood clots',
-    status: 'NEW',
-  },
-  {
-    name: 'Metformin 1g',
-    detail: '1x a day — existing medicine',
-    status: null,
-  },
-  {
-    name: 'Atorvastatin 40mg',
-    detail: 'At night — existing medicine',
-    status: null,
-  },
-];
+// ---- Records store ---------------------------------------------------------
+// The list below is NOT hardcoded — it is the set of summaries a clinician has
+// actually approved and submitted from the Nurse Notes desktop app. That app
+// POSTs each approved document to a small local store (see the repo's
+// server/records-api.js), served on the Vite dev server. We fetch it from that
+// same machine.
+//
+// Must match the port the Nurse Notes web app runs on. `npm run dev` pins the
+// web server to 5199 (and to --host, so it's reachable over the LAN).
+const STORE_PORT = 5199;
 
-// Full verbatim clinician discharge summary (synthetic sample).
-const ORIGINAL_NOTES =
-  `Waikato Hospital — Discharge Summary
-[SYNTHETIC TEST DOCUMENT — not a real patient]
+// ── Reaching the store from the phone ──────────────────────────────────────
+// FULL-URL OVERRIDE. Set this to reach the store directly, ignoring everything
+// below. REQUIRED when Expo runs in --tunnel mode (the phone is not on your
+// LAN, so it can't hit your PC's IP): expose the store with its own tunnel and
+// paste that URL here. Examples:
+//   ngrok:       run `ngrok http 5199`      → 'https://abc123.ngrok-free.app'
+//   cloudflared: run `cloudflared tunnel --url http://localhost:5199'
+// Leave blank to auto-detect (works for Expo web and Expo Go on the SAME Wi-Fi).
+const API_BASE_OVERRIDE = 'https://realizing-tianna-lollingly.ngrok-free.dev';
 
-Patient: Aroha Ngata (fictional)   NHI: ZZZ9999   DOB: 14/03/1958  Age 68
-Ward: M3   Consultant: Dr S. Patel
-Admitted: 28/07/2026   Discharged: 02/08/2026
+function resolveApiBase() {
+  if (API_BASE_OVERRIDE) return API_BASE_OVERRIDE.replace(/\/+$/, '');
 
-Dx: 1. Community-acquired pneumonia (RLL)  2. T2DM (poorly controlled, HbA1c 74)
-3. New AF  4. CKD stage 3a
+  // Expo web → same host the page is served from.
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
+    return `http://${window.location.hostname}:${STORE_PORT}`;
+  }
 
-PC: 4/7 productive cough, fevers, increasing SOB. O/E febrile 38.7, sats 89% RA,
-RR 24, crackles R base.
+  // Expo Go / device on the SAME LAN → reuse the Metro bundle host (your PC's
+  // LAN IP — the phone already loads the app from it) and swap in the store
+  // port. NOTE: in --tunnel mode this resolves to the tunnel domain, which does
+  // NOT forward port 5199 — use API_BASE_OVERRIDE above instead.
+  const scriptURL = NativeModules?.SourceCode?.scriptURL || '';
+  const m = scriptURL.match(/https?:\/\/([^:/]+)/);
+  const host = m ? m[1] : 'localhost';
+  return `http://${host}:${STORE_PORT}`;
+}
 
-Ix: CXR RLL consolidation. CRP 187, WCC 15.2, eGFR 52, Trop neg. ECG AF ~110bpm.
+const API_BASE = resolveApiBase();
 
-Mgmt: IV ceftriaxone 1g OD 3/7 then switched PO. Rate control w/ bisoprolol.
-Commenced apixaban for AF (CHA2DS2-VASc 4). Metformin held during admission,
-restarted on d/c.
+async function fetchRecords() {
+  const res = await fetch(`${API_BASE}/api/records`, {
+    headers: {
+      Accept: 'application/json',
+      // Skip ngrok's interstitial HTML warning when the store is tunnelled.
+      'ngrok-skip-browser-warning': 'true',
+    },
+  });
+  if (!res.ok) throw new Error(`Store returned HTTP ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
 
-Meds on discharge:
-- Amoxicillin 500mg TDS PO — 5/7 course, complete it
-- Bisoprolol 2.5mg OD (NEW)
-- Apixaban 5mg BD (NEW) — do not stop without advice, bleeding risk
-- Metformin 1g BD (unchanged)
-- Atorvastatin 40mg nocte (unchanged)
+// ---- Formatting helpers ----------------------------------------------------
+function formatWhen(ts) {
+  if (!ts) return '';
+  try {
+    return new Date(ts).toLocaleString('en-NZ', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return '';
+  }
+}
 
-F/U: Repeat CXR in 6/52 via GP. Anticoag clinic r/v 2/52. GP recheck renal fn 1/52.
-Cardiology OPA re AF — letter to follow.
-
-Safety-net: return if worsening SOB, chest pain, haemoptysis, or signs of bleeding
-(melaena, bruising). Diabetic education referral made.
-
-Clinician: Dr J. Lee, House Officer`;
-
-// Warning signs — single source for both the card and the narration.
-const WARNINGS = ['Worse shortness of breath (SOB)', 'Chest pain'];
-
-// Turn on-screen shorthand into something the TTS engine reads naturally
-// (e.g. "3x a day" -> "three times a day", strip the "(SOB)" abbreviation).
+// Turn shorthand / markdown into something the TTS engine reads naturally.
 function speakable(text) {
-  return text
+  return String(text)
+    .replace(/[*#_`>]/g, '') // strip markdown markers
     .replace(/\(SOB\)/g, '')
     .replace(/\bSOB\b/g, 'shortness of breath')
     .replace(/\b1x a day\b/gi, 'once a day')
@@ -111,27 +113,79 @@ function speakable(text) {
     .trim();
 }
 
-// Build the spoken narration from the SAME data that renders the cards,
-// so the audio can never drift out of sync with what's on screen.
-function buildNarration() {
-  const meds = MEDICINES.map((m) => {
-    const isNew = m.status === 'NEW' ? 'This is a new medicine. ' : '';
-    return `${m.name}. ${isNew}${speakable(m.detail)}.`;
-  }).join(' ');
-
-  const warns = WARNINGS.map(speakable).join(', or ');
-
-  return (
-    'Here is a summary of your discharge from Waikato Hospital. ' +
-    'Here are your medicines and what changed. ' +
-    meds +
-    ' Warning signs. Call for help now if you have ' +
-    warns +
-    '. That is the end of your summary.'
-  );
+// ---- Tiny markdown renderer ------------------------------------------------
+// The approved summary is stored as the clinician-edited markdown. We render a
+// practical subset (headings, bullets, bold, paragraphs) so the phone shows
+// exactly what was approved — no re-parsing into a fixed template.
+function renderInline(text, keyPrefix) {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    const m = part.match(/^\*\*([^*]+)\*\*$/);
+    if (m) {
+      return (
+        <Text key={`${keyPrefix}-b${i}`} style={styles.mdBold}>
+          {m[1]}
+        </Text>
+      );
+    }
+    return part;
+  });
 }
 
-const NARRATION_SCRIPT = buildNarration();
+function Markdown({ text }) {
+  const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
+  const blocks = [];
+  let key = 0;
+
+  for (let raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) continue;
+
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      const level = heading[1].length;
+      blocks.push(
+        <Text key={key++} style={[styles.mdHeading, level >= 3 && styles.mdHeadingSm]}>
+          {renderInline(heading[2], `h${key}`)}
+        </Text>,
+      );
+      continue;
+    }
+
+    const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
+    if (bullet) {
+      blocks.push(
+        <View key={key++} style={styles.mdBulletRow}>
+          <View style={styles.mdBulletDot} />
+          <Text style={styles.mdBulletText}>{renderInline(bullet[1], `li${key}`)}</Text>
+        </View>,
+      );
+      continue;
+    }
+
+    const numbered = line.match(/^\s*(\d+)\.\s+(.*)$/);
+    if (numbered) {
+      blocks.push(
+        <View key={key++} style={styles.mdBulletRow}>
+          <Text style={styles.mdNumber}>{numbered[1]}.</Text>
+          <Text style={styles.mdBulletText}>{renderInline(numbered[2], `no${key}`)}</Text>
+        </View>,
+      );
+      continue;
+    }
+
+    blocks.push(
+      <Text key={key++} style={styles.mdParagraph}>
+        {renderInline(line, `p${key}`)}
+      </Text>,
+    );
+  }
+
+  if (blocks.length === 0) {
+    return <Text style={styles.mdParagraph}>No content.</Text>;
+  }
+  return <View>{blocks}</View>;
+}
 
 // ---- Small components -------------------------------------------------------
 function Badge({ icon, label, bg, color }) {
@@ -143,13 +197,106 @@ function Badge({ icon, label, bg, color }) {
   );
 }
 
-// ---- Screen ----------------------------------------------------------------
-export default function App() {
+function AppBar({ onBack, title }) {
+  return (
+    <View style={styles.appBar}>
+      {onBack ? (
+        <TouchableOpacity onPress={onBack} hitSlop={10} style={styles.appBarBack}>
+          <Ionicons name="chevron-back" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      ) : (
+        <MaterialCommunityIcons name="clipboard-text-outline" size={22} color="#ffffff" />
+      )}
+      <Text style={styles.appBarTitle}>{title}</Text>
+      <View style={styles.appBarSpacer} />
+      <Ionicons name="person-circle-outline" size={26} color="#ffffff" />
+    </View>
+  );
+}
+
+// ---- Records list screen ---------------------------------------------------
+function RecordsList({ records, loading, error, onRefresh, onOpen }) {
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={loading && records.length > 0} onRefresh={onRefresh} />
+      }
+    >
+      <Text style={styles.listHeading}>Health Records</Text>
+      <Text style={styles.listSub}>Summaries your care team has approved and sent to you.</Text>
+
+      {error && (
+        <View style={styles.noticeCard}>
+          <Ionicons name="cloud-offline-outline" size={18} color={COLORS.warnText} />
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <Text style={styles.noticeText}>
+              Can't reach your records right now. Pull down to try again.
+            </Text>
+            <Text style={styles.noticeAddr}>Tried: {API_BASE}/api/records</Text>
+          </View>
+        </View>
+      )}
+
+      {loading && records.length === 0 && (
+        <View style={styles.centerBox}>
+          <ActivityIndicator color={COLORS.primary} />
+          <Text style={styles.centerText}>Loading your records…</Text>
+        </View>
+      )}
+
+      {!loading && !error && records.length === 0 && (
+        <View style={styles.centerBox}>
+          <MaterialCommunityIcons name="file-outline" size={40} color={COLORS.subtext} />
+          <Text style={styles.centerText}>No records yet</Text>
+          <Text style={styles.centerHint}>
+            When a nurse approves and submits a summary, it appears here.
+          </Text>
+        </View>
+      )}
+
+      {records.map((r) => (
+        <TouchableOpacity
+          key={r.id}
+          style={styles.recordItem}
+          activeOpacity={0.7}
+          onPress={() => onOpen(r.id)}
+        >
+          <View style={styles.recordIcon}>
+            <MaterialCommunityIcons name="file-document-outline" size={22} color={COLORS.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.recordTitle}>{r.patientName || 'Discharge summary'}</Text>
+            <Text style={styles.recordMeta} numberOfLines={1}>
+              {[r.hospital, r.ward].filter(Boolean).join(' · ') || 'Discharge summary'}
+            </Text>
+            <View style={styles.recordTagRow}>
+              <View style={styles.approvedPill}>
+                <Ionicons name="shield-checkmark" size={11} color={COLORS.primary} />
+                <Text style={styles.approvedPillText}>Approved</Text>
+              </View>
+              {r.readingGrade != null && (
+                <Text style={styles.recordGrade}>Grade {r.readingGrade} reading level</Text>
+              )}
+            </View>
+            <Text style={styles.recordWhen}>{formatWhen(r.submittedAt)}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.subtext} />
+        </TouchableOpacity>
+      ))}
+
+      <View style={{ height: 24 }} />
+    </ScrollView>
+  );
+}
+
+// ---- Record detail screen --------------------------------------------------
+function RecordDetail({ record }) {
   const [tab, setTab] = useState('plain'); // 'plain' | 'original'
   const [playing, setPlaying] = useState(false);
-  const nzVoiceRef = useRef(null); // preferred en-NZ voice identifier, if the device has one
+  const nzVoiceRef = useRef(null);
 
-  // Find a New Zealand English voice on mount; fall back to any English voice.
   useEffect(() => {
     let mounted = true;
     Speech.getAvailableVoicesAsync()
@@ -159,15 +306,20 @@ export default function App() {
         const enAny = voices.find((v) => (v.language || '').startsWith('en'));
         nzVoiceRef.current = (nz || enAny)?.identifier ?? null;
       })
-      .catch(() => {
-        /* voice list is best-effort; language option below still applies */
-      });
-    // Stop any narration if the screen unmounts.
+      .catch(() => {});
     return () => {
       mounted = false;
       Speech.stop();
     };
   }, []);
+
+  const initials = (record.patientName || 'PT')
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
   const toggleNarration = () => {
     if (playing) {
@@ -175,12 +327,14 @@ export default function App() {
       setPlaying(false);
       return;
     }
+    const script =
+      'Here is your approved summary. ' + speakable(record.plainText) + ' End of summary.';
     setPlaying(true);
-    Speech.speak(NARRATION_SCRIPT, {
-      language: 'en-NZ', // Kiwi accent where the device provides it
+    Speech.speak(script, {
+      language: 'en-NZ',
       voice: nzVoiceRef.current || undefined,
       pitch: 1.0,
-      rate: 0.95, // slightly slower for clarity
+      rate: 0.95,
       onDone: () => setPlaying(false),
       onStopped: () => setPlaying(false),
       onError: () => setPlaying(false),
@@ -188,209 +342,177 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryDark} />
-
-      {/* Top App Bar */}
-      <View style={styles.appBar}>
-        <MaterialCommunityIcons name="heart-pulse" size={22} color="#ffffff" />
-        <Text style={styles.appBarTitle}>ManageMyHealth</Text>
-        <View style={styles.appBarSpacer} />
-        <Ionicons name="person-circle-outline" size={26} color="#ffffff" />
+    <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      {/* Approved release banner — from the real submission */}
+      <View style={styles.approvedBanner}>
+        <Ionicons name="checkmark-circle" size={18} color="#ffffff" />
+        <Text style={styles.approvedText}>
+          {record.approvedBy
+            ? `Approved by ${record.approvedBy}${record.approvedAt ? ` (${record.approvedAt})` : ''}`
+            : 'Approved for release'}
+        </Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Approved release banner */}
-        <View style={styles.approvedBanner}>
-          <Ionicons name="checkmark-circle" size={18} color="#ffffff" />
-          <Text style={styles.approvedText}>
-            Approved by Nurse William Hernandez (7 Aug 2026, 10:00 am)
+      {/* Patient card */}
+      <View style={styles.card}>
+        <View style={styles.patientRow}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.patientName}>{record.patientName || 'Patient'}</Text>
+            {!!record.nhi && <Text style={styles.patientMeta}>NHI: {record.nhi}</Text>}
+            <Text style={styles.patientMeta}>
+              {[record.hospital, record.ward].filter(Boolean).join(' · ') || 'Discharge summary'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <Badge
+          icon={<Ionicons name="shield-checkmark" size={14} color={COLORS.primary} />}
+          label="Approved for Release"
+          bg={COLORS.badgeBg}
+          color={COLORS.primary}
+        />
+      </View>
+
+      {/* Segmented tabs */}
+      <View style={styles.segment}>
+        <TouchableOpacity
+          style={[styles.segmentBtn, tab === 'plain' && styles.segmentActive]}
+          activeOpacity={0.8}
+          onPress={() => setTab('plain')}
+        >
+          <Text style={[styles.segmentText, tab === 'plain' && styles.segmentTextActive]}>
+            Plain Language Summary
           </Text>
-        </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segmentBtn, tab === 'original' && styles.segmentActive]}
+          activeOpacity={0.8}
+          onPress={() => setTab('original')}
+        >
+          <Text style={[styles.segmentText, tab === 'original' && styles.segmentTextActive]}>
+            Original Medical Notes
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Patient card */}
-        <View style={styles.card}>
-          <View style={styles.patientRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>AN</Text>
+      {tab === 'plain' ? (
+        <View>
+          <TouchableOpacity
+            style={[styles.audioBtn, playing && styles.audioBtnPlaying]}
+            activeOpacity={0.85}
+            onPress={toggleNarration}
+          >
+            <Ionicons name={playing ? 'pause-circle' : 'volume-high'} size={20} color="#ffffff" />
+            <Text style={styles.audioBtnText}>{playing ? 'Playing…' : 'Listen to Summary'}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="text-box-check-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.cardTitle}>Your Plain-Language Summary</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.patientName}>Aroha Ngata</Text>
-              <Text style={styles.patientMeta}>NHI: ZZZ9999</Text>
-              <Text style={styles.patientMeta}>Waikato Hospital · Ward M3</Text>
+            <Markdown text={record.plainText} />
+          </View>
+
+          {record.readingGrade != null && (
+            <View style={styles.footerBadge}>
+              <MaterialCommunityIcons name="book-open-variant" size={14} color={COLORS.subtext} />
+              <Text style={styles.footerBadgeText}>
+                Simplified to Grade {record.readingGrade} Reading Level
+                {record.jargonCount != null
+                  ? ` · Reduced from ${record.jargonCount} Jargon Terms`
+                  : ''}
+              </Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <View>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="file-document-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.cardTitle}>Original Medical Notes</Text>
+            </View>
+            <View style={styles.monoWrap}>
+              <Text style={styles.mono}>
+                {record.originalText || 'The original clinician notes were not included.'}
+              </Text>
             </View>
           </View>
-          <View style={styles.divider} />
-          <Badge
-            icon={
-              <Ionicons
-                name="shield-checkmark"
-                size={14}
-                color={COLORS.primary}
-              />
-            }
-            label="Approved for Release"
-            bg={COLORS.badgeBg}
-            color={COLORS.primary}
+          <View style={styles.footerBadge}>
+            <Ionicons name="lock-closed" size={13} color={COLORS.subtext} />
+            <Text style={styles.footerBadgeText}>Verbatim clinician record · Read only</Text>
+          </View>
+        </View>
+      )}
+
+      <View style={{ height: 24 }} />
+    </ScrollView>
+  );
+}
+
+// ---- Root ------------------------------------------------------------------
+export default function App() {
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchRecords();
+      setRecords(data);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial load + light polling while viewing the list, so a summary the
+  // clinician submits appears without the patient doing anything.
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (selectedId) return undefined;
+    const id = setInterval(load, 4000);
+    return () => clearInterval(id);
+  }, [selectedId, load]);
+
+  const selected = selectedId ? records.find((r) => r.id === selectedId) : null;
+
+  // If the selected record vanished (e.g. store reset), fall back to the list.
+  useEffect(() => {
+    if (selectedId && !selected && !loading) setSelectedId(null);
+  }, [selectedId, selected, loading]);
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryDark} />
+      {selected ? (
+        <>
+          <AppBar title="Nurse Notes" onBack={() => setSelectedId(null)} />
+          <RecordDetail record={selected} />
+        </>
+      ) : (
+        <>
+          <AppBar title="Nurse Notes" />
+          <RecordsList
+            records={records}
+            loading={loading}
+            error={error}
+            onRefresh={load}
+            onOpen={setSelectedId}
           />
-        </View>
-
-        {/* Segmented tabs */}
-        <View style={styles.segment}>
-          <TouchableOpacity
-            style={[styles.segmentBtn, tab === 'plain' && styles.segmentActive]}
-            activeOpacity={0.8}
-            onPress={() => setTab('plain')}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                tab === 'plain' && styles.segmentTextActive,
-              ]}
-            >
-              Plain Language Summary
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.segmentBtn,
-              tab === 'original' && styles.segmentActive,
-            ]}
-            activeOpacity={0.8}
-            onPress={() => setTab('original')}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                tab === 'original' && styles.segmentTextActive,
-              ]}
-            >
-              Original Medical Notes
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {tab === 'plain' ? (
-          <View>
-            {/* Audio narration button */}
-            <TouchableOpacity
-              style={[styles.audioBtn, playing && styles.audioBtnPlaying]}
-              activeOpacity={0.85}
-              onPress={toggleNarration}
-            >
-              <Ionicons
-                name={playing ? 'pause-circle' : 'volume-high'}
-                size={20}
-                color="#ffffff"
-              />
-              <Text style={styles.audioBtnText}>
-                {playing ? 'Playing…' : 'Listen to Summary'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Card 1: Medicines */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <MaterialCommunityIcons
-                  name="pill"
-                  size={20}
-                  color={COLORS.primary}
-                />
-                <Text style={styles.cardTitle}>Your Medicines &amp; What Changed</Text>
-              </View>
-
-              {MEDICINES.map((m, i) => (
-                <View
-                  key={m.name}
-                  style={[
-                    styles.medRow,
-                    i === MEDICINES.length - 1 && styles.medRowLast,
-                  ]}
-                >
-                  <View style={styles.medBullet} />
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.medNameRow}>
-                      <Text style={styles.medName}>{m.name}</Text>
-                      {m.status === 'NEW' && (
-                        <View style={styles.newTag}>
-                          <Text style={styles.newTagText}>NEW</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.medDetail}>{m.detail}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {/* Card 2: Warning signs */}
-            <View style={styles.warnCard}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="warning" size={20} color={COLORS.warnText} />
-                <Text style={[styles.cardTitle, { color: COLORS.warnText }]}>
-                  Warning Signs — Call someone now
-                </Text>
-              </View>
-              <Text style={styles.warnLead}>Call for help if you have:</Text>
-              {WARNINGS.map((w) => (
-                <View key={w} style={styles.warnItem}>
-                  <Ionicons
-                    name="alert-circle"
-                    size={16}
-                    color={COLORS.warnText}
-                  />
-                  <Text style={styles.warnItemText}>{w}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Footer badge */}
-            <View style={styles.footerBadge}>
-              <MaterialCommunityIcons
-                name="book-open-variant"
-                size={14}
-                color={COLORS.subtext}
-              />
-              <Text style={styles.footerBadgeText}>
-                Simplified to Grade 6 Reading Level · Reduced from 61 Jargon
-                Terms
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View>
-            {/* Original clinical notes */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <MaterialCommunityIcons
-                  name="file-document-outline"
-                  size={20}
-                  color={COLORS.primary}
-                />
-                <Text style={styles.cardTitle}>Original Medical Notes</Text>
-              </View>
-              <View style={styles.monoWrap}>
-                <Text style={styles.mono}>{ORIGINAL_NOTES}</Text>
-              </View>
-            </View>
-            <View style={styles.footerBadge}>
-              <Ionicons
-                name="lock-closed"
-                size={13}
-                color={COLORS.subtext}
-              />
-              <Text style={styles.footerBadgeText}>
-                Verbatim clinician record · Read only
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <View style={{ height: 24 }} />
-      </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -409,6 +531,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  appBarBack: { marginRight: 2 },
   appBarTitle: {
     color: '#ffffff',
     fontSize: 18,
@@ -419,6 +542,74 @@ const styles = StyleSheet.create({
   appBarSpacer: { flex: 1 },
   scroll: { padding: 16 },
 
+  // List
+  listHeading: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
+  listSub: { fontSize: 13, color: COLORS.subtext, marginBottom: 16 },
+
+  recordItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    marginBottom: 12,
+  },
+  recordIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: COLORS.badgeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  recordTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  recordMeta: { fontSize: 13, color: COLORS.subtext, marginTop: 1 },
+  recordTagRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap' },
+  approvedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.badgeBg,
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    marginRight: 8,
+  },
+  approvedPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginLeft: 4,
+  },
+  recordGrade: { fontSize: 11, color: COLORS.subtext, fontWeight: '600' },
+  recordWhen: { fontSize: 12, color: COLORS.subtext, marginTop: 6 },
+
+  noticeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.warnBg,
+    borderWidth: 1,
+    borderColor: COLORS.warnBorder,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  noticeText: { color: COLORS.warnText, fontSize: 13, fontWeight: '500' },
+  noticeAddr: {
+    color: COLORS.warnText,
+    fontSize: 11,
+    marginTop: 4,
+    opacity: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+
+  centerBox: { alignItems: 'center', paddingVertical: 48 },
+  centerText: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginTop: 12 },
+  centerHint: { fontSize: 13, color: COLORS.subtext, marginTop: 6, textAlign: 'center', paddingHorizontal: 24 },
+
+  // Detail
   approvedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -428,13 +619,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginBottom: 14,
   },
-  approvedText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 8,
-    flex: 1,
-  },
+  approvedText: { color: '#ffffff', fontSize: 13, fontWeight: '600', marginLeft: 8, flex: 1 },
 
   card: {
     backgroundColor: COLORS.card,
@@ -457,11 +642,7 @@ const styles = StyleSheet.create({
   avatarText: { color: COLORS.primary, fontWeight: '700', fontSize: 16 },
   patientName: { fontSize: 18, fontWeight: '700', color: COLORS.text },
   patientMeta: { fontSize: 13, color: COLORS.subtext, marginTop: 2 },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 14,
-  },
+  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 14 },
 
   badge: {
     flexDirection: 'row',
@@ -480,12 +661,7 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 16,
   },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 9,
-    alignItems: 'center',
-  },
+  segmentBtn: { flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: 'center' },
   segmentActive: {
     backgroundColor: COLORS.card,
     shadowColor: '#000',
@@ -494,11 +670,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
   },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.subtext,
-  },
+  segmentText: { fontSize: 13, fontWeight: '600', color: COLORS.subtext },
   segmentTextActive: { color: COLORS.primaryDark },
 
   audioBtn: {
@@ -516,84 +688,27 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   audioBtnPlaying: { backgroundColor: COLORS.primaryDark },
-  audioBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-    marginLeft: 8,
-  },
+  audioBtnText: { color: '#ffffff', fontSize: 15, fontWeight: '700', marginLeft: 8 },
 
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginLeft: 8,
-    flex: 1,
-  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginLeft: 8, flex: 1 },
 
-  medRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  medRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
-  medBullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  // Markdown blocks
+  mdHeading: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginTop: 10, marginBottom: 6 },
+  mdHeadingSm: { fontSize: 14 },
+  mdParagraph: { fontSize: 14, lineHeight: 21, color: COLORS.text, marginBottom: 8 },
+  mdBold: { fontWeight: '800', color: COLORS.text },
+  mdBulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6, paddingLeft: 4 },
+  mdBulletDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: COLORS.primary,
-    marginTop: 6,
-    marginRight: 12,
+    marginTop: 7,
+    marginRight: 10,
   },
-  medNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  medName: { fontSize: 15, fontWeight: '600', color: COLORS.text },
-  medDetail: { fontSize: 13, color: COLORS.subtext, marginTop: 2 },
-  newTag: {
-    backgroundColor: COLORS.badgeBg,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  newTagText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.newTag,
-    letterSpacing: 0.5,
-  },
-
-  warnCard: {
-    backgroundColor: COLORS.warnBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.warnBorder,
-    padding: 18,
-    marginBottom: 14,
-  },
-  warnLead: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.warnText,
-    marginBottom: 8,
-  },
-  warnItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  warnItemText: {
-    fontSize: 14,
-    color: COLORS.warnText,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
+  mdNumber: { fontSize: 14, fontWeight: '700', color: COLORS.primary, marginRight: 8, lineHeight: 21 },
+  mdBulletText: { flex: 1, fontSize: 14, lineHeight: 21, color: COLORS.text },
 
   footerBadge: {
     flexDirection: 'row',

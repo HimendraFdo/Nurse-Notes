@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { generateRewrite, DEFAULT_BASE_URL, DEFAULT_MODEL } from './lib/llm.js'
 import { extractText } from './lib/extractText.js'
 import { downloadPatientPdf } from './lib/pdf.js'
+import { readingGrade, countJargon } from './lib/readability.js'
+import { submitRecord, parsePatientMeta } from './lib/records.js'
 import { GradeBadge, JargonBadge } from './components/Badges.jsx'
 import MarkdownEditor from './components/MarkdownEditor.jsx'
 import PatientView from './PatientView.jsx'
@@ -38,6 +40,10 @@ export default function App() {
   const [approved, setApproved] = useState(null) // { nurseName, at }
   const [nurseName, setNurseName] = useState('')
 
+  // Submission to the patient phone app (the local records store).
+  const [submitState, setSubmitState] = useState('idle') // idle | submitting | sent | error
+  const [submitError, setSubmitError] = useState('')
+
   const [showSettings, setShowSettings] = useState(false)
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL)
   const [model, setModel] = useState(DEFAULT_MODEL)
@@ -56,6 +62,8 @@ export default function App() {
     setError('')
     setApproved(null)
     setView('clinician')
+    setSubmitState('idle')
+    setSubmitError('')
   }
 
   async function handleFile(e) {
@@ -117,6 +125,34 @@ export default function App() {
   function handleUnlock() {
     setApproved(null)
     setView('clinician')
+    setSubmitState('idle')
+    setSubmitError('')
+  }
+
+  async function handleSubmit() {
+    if (!isApproved || submitState === 'submitting') return
+    setSubmitState('submitting')
+    setSubmitError('')
+    try {
+      const meta = parsePatientMeta(original)
+      await submitRecord({
+        ...meta,
+        approvedBy: approved.nurseName,
+        approvedAt: approved.at,
+        plainText: rewrite,
+        originalText: original,
+        readingGrade: readingGrade(rewrite),
+        jargonCount: countJargon(original).count,
+      })
+      setSubmitState('sent')
+    } catch (err) {
+      setSubmitState('error')
+      setSubmitError(
+        `${err.message}\n\nThis sends to the local Nurse Notes store on this ` +
+          `machine. Make sure the app is running under \`npm run dev\` (the store ` +
+          `lives on the dev server); it is not available in the static single-file build.`,
+      )
+    }
   }
 
   if (view === 'patient') {
@@ -281,7 +317,7 @@ export default function App() {
               View on patient's phone
             </button>
             <button
-              className="btn btn--primary btn--lg"
+              className="btn btn--ghost btn--lg"
               onClick={() =>
                 downloadPatientPdf({
                   text: rewrite,
@@ -292,9 +328,24 @@ export default function App() {
             >
               Export patient PDF
             </button>
+            {submitState === 'sent' ? (
+              <span className="submit-status submit-status--sent" role="status">
+                ✓ Sent to patient app
+              </span>
+            ) : (
+              <button
+                className="btn btn--primary btn--lg"
+                onClick={handleSubmit}
+                disabled={submitState === 'submitting'}
+              >
+                {submitState === 'submitting' ? 'Submitting…' : 'Submit to patient app'}
+              </button>
+            )}
           </>
         )}
       </section>
+
+      {submitError && <pre className="error">{submitError}</pre>}
     </Shell>
   )
 }
