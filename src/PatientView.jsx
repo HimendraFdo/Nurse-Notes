@@ -1,36 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+<<<<<<< HEAD
+=======
+import { GradeBadge } from './components/Badges.jsx'
+>>>>>>> dbd1531cec49b0cdc9b3fba7345624f181a4be1e
 
-// The patient-facing mobile view: what the patient actually sees on their
-// phone after the clinician approves. Two ways to get the text onto the
-// phone, both fully offline (no server, no upload):
-//   1. Scan the QR code — the approved text is encoded directly into it, so
-//      the patient's phone camera app opens it with nothing to install.
-//   2. Or preview it right here in a phone-shaped frame, for the demo.
-// SOTA on-device TTS (Kokoro etc.) needs a model download, which breaks the
-// "single file, works offline the moment it opens" story — the browser's
-// built-in Web Speech API (SpeechSynthesis) ships in every major browser,
-// needs no download, and is the honest choice for a hackathon demo of this
-// scope. Named as a future-roadmap upgrade path in the docx/slides.
+// What the patient sees on their phone once the clinician approves. Two
+// offline routes onto the phone: scan the QR code (which carries the approved
+// text itself, so nothing is fetched and nothing is installed), or preview it
+// here in a phone frame for the demo. Read-aloud uses the browser's built-in
+// SpeechSynthesis — no model download, so the single-file build still works
+// the moment it opens.
 
 // QR codes have a practical capacity ceiling (~2-3KB at low error
 // correction). Long summaries still render — the QR just gets denser — but
 // past this we warn rather than silently truncate the patient's record.
 const QR_SAFE_LIMIT = 1500
 
-function speakSupported() {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window
-}
+const SPEECH_SUPPORTED = 'speechSynthesis' in window
 
 function useSpeech(text) {
   const [speaking, setSpeaking] = useState(false)
 
-  useEffect(() => {
-    return () => window.speechSynthesis?.cancel()
-  }, [])
+  // Stop narration if the view unmounts mid-sentence.
+  useEffect(() => () => window.speechSynthesis?.cancel(), [])
 
   function toggle() {
-    if (!speakSupported()) return
+    if (!SPEECH_SUPPORTED) return
     if (speaking) {
       window.speechSynthesis.cancel()
       setSpeaking(false)
@@ -44,7 +40,7 @@ function useSpeech(text) {
     setSpeaking(true)
   }
 
-  return { speaking, toggle, supported: speakSupported() }
+  return { speaking, toggle, supported: SPEECH_SUPPORTED }
 }
 
 export default function PatientView({ rewrite, approved, onBack }) {

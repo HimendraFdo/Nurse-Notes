@@ -2,9 +2,6 @@
 
 **Plain-language hospital discharge summaries, with a nurse in the loop.**
 
-> Briefly renamed "ClearChart" during early ideation; the project is now
-> called Nurse Notes (matching the repository name and both apps).
-
 Nurse Notes rewrites hospital discharge summaries and consent forms into plain
 language (target ~6th-grade reading level) using a small language model that
 runs entirely on the local machine. Nothing is released to a patient until a
@@ -186,6 +183,7 @@ vite.config.js                     build config (relative base, offline)
 src/main.jsx                       React entry
 src/App.jsx                        the clinician review screen
 src/PatientView.jsx                patient-facing view + QR code
+src/components/Badges.jsx          reading-grade & jargon badges
 src/components/MarkdownEditor.jsx  WYSIWYG editor for the rewrite pane
 src/styles.css                     styling
 src/lib/llm.js                     LM Studio client (streams the rewrite)

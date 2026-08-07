@@ -1,8 +1,8 @@
 # Nurse Notes — Project Brief & Build Context
 
-> Briefly named "ClearChart" during early ideation — the project is now called
-> Nurse Notes, matching the repository name and both the clinician web app and
-> the patient phone app.
+> Briefly named "ClearChart" mid-project — the project is now called Nurse
+> Notes, matching the repository name and both the clinician web app and the
+> patient phone app. "ClearChart" should not appear below or in the UI.
 >
 > Drop this file at the root of the repo. Claude Code reads `CLAUDE.md`
 > automatically as project context. Rename to `PROJECT_BRIEF.md` if you'd

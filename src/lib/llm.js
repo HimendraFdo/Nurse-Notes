@@ -1,8 +1,7 @@
 // Talks to the local LM Studio server (OpenAI-compatible). Streams tokens
 // so the rewrite fills in progressively. No API key needed locally.
 import SYSTEM_PROMPT from '../../prompts/system-prompt.txt?raw'
-
-export { SYSTEM_PROMPT }
+import { buildDateBrief } from './dates.js'
 
 // Under `npm run dev`, the Vite proxy (vite.config.js) forwards same-origin
 // `/v1/*` to LM Studio, avoiding the cross-origin CORS preflight. That proxy
@@ -10,9 +9,7 @@ export { SYSTEM_PROMPT }
 // a static host with no backend), so fall back to hitting LM Studio
 // directly there — this requires CORS enabled in LM Studio for that mode.
 export const DEFAULT_BASE_URL =
-  typeof window !== 'undefined' && window.location.protocol === 'file:'
-    ? 'http://localhost:1234/v1'
-    : '/v1'
+  window.location.protocol === 'file:' ? 'http://localhost:1234/v1' : '/v1'
 export const DEFAULT_MODEL = 'google/gemma-3n-e4b'
 
 // Stream a rewrite. `onToken(delta)` is called with each text chunk.
@@ -25,6 +22,12 @@ export async function generateRewrite({
   temperature = 0.25,
   signal,
 } = {}) {
+  // Resolve every follow-up interval to a real date before the model sees the
+  // document, and append the results. The model copies these rather than
+  // counting days, which it does unreliably at this size.
+  const dateBrief = buildDateBrief(originalText)
+  const userContent = dateBrief ? `${originalText}\n\n${dateBrief}` : originalText
+
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -35,7 +38,7 @@ export async function generateRewrite({
       stream: true,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: originalText },
+        { role: 'user', content: userContent },
       ],
     }),
   })
