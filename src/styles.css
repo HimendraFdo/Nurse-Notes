@@ -235,10 +235,6 @@ body {
   background: var(--surface);
   outline: none;
 }
-.pane__text:read-only {
-  background: #f7f6f1;
-  color: #37484c;
-}
 
 /* WYSIWYG markdown editor (right pane) */
 .md-wrap {

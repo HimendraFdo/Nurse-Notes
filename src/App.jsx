@@ -1,53 +1,40 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { generateRewrite, DEFAULT_BASE_URL, DEFAULT_MODEL } from './lib/llm.js'
 import { extractText } from './lib/extractText.js'
-import { readingGrade, gradeLabel, countJargon } from './lib/readability.js'
 import { downloadPatientPdf } from './lib/pdf.js'
+import { readingGrade, countJargon } from './lib/readability.js'
 import { submitRecord, parsePatientMeta } from './lib/records.js'
+import { GradeBadge, JargonBadge } from './components/Badges.jsx'
 import MarkdownEditor from './components/MarkdownEditor.jsx'
 import PatientView from './PatientView.jsx'
 import SAMPLE_TEXT from '../samples/synthetic-discharge-01.txt?raw'
 
-export function GradeBadge({ text }) {
-  const grade = useMemo(() => readingGrade(text), [text])
-  if (grade == null) return <span className="badge badge--empty">—</span>
-  const level = gradeLabel(grade)
-  const meetsTarget = grade <= 6
+// Branding chrome shared by the clinician and patient views.
+function Shell({ tagline, action, children }) {
   return (
-    <span
-      className={`badge badge--${level.replace(/\s+/g, '-')}`}
-      title={`Flesch–Kincaid reading grade ${grade} (${level}). Target for patients: 6th grade or below.`}
-    >
-      {meetsTarget && <span className="badge__tick" aria-hidden="true">✓</span>}
-      <strong>{grade}</strong>
-      <span className="badge__unit">grade</span>
-    </span>
-  )
-}
-
-function JargonBadge({ text }) {
-  const { count, unique } = useMemo(() => countJargon(text), [text])
-  if (!text || !text.trim()) return <span className="badge badge--empty">—</span>
-  const level = count === 0 ? 'plain-language' : count <= 8 ? 'moderate' : 'complex'
-  return (
-    <span
-      className={`badge badge--${level}`}
-      title={
-        count === 0
-          ? 'No clinical shorthand detected — a patient can read this.'
-          : `${count} pieces of clinical shorthand (${unique} distinct) a patient can't decode.`
-      }
-    >
-      <strong>{count}</strong>
-      <span className="badge__unit">jargon</span>
-    </span>
+    <div className="app">
+      <header className="app__header">
+        <div className="app__brand">
+          <span className="app__logo" aria-hidden="true">✚</span>
+          <div>
+            <h1>Nurse Notes</h1>
+            <p className="app__tagline">{tagline}</p>
+          </div>
+        </div>
+        {action}
+      </header>
+      {children}
+      <footer className="app__footer">
+        Runs entirely on this device. No data leaves your machine.
+      </footer>
+    </div>
   )
 }
 
 export default function App() {
   const [original, setOriginal] = useState('')
   const [rewrite, setRewrite] = useState('')
-  const [status, setStatus] = useState('idle') // idle | generating | done | error
+  const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
 
   const [approved, setApproved] = useState(null) // { nurseName, at }
@@ -65,13 +52,23 @@ export default function App() {
   const fileInputRef = useRef(null)
   const abortRef = useRef(null)
 
-  const isGenerating = status === 'generating'
   const isApproved = approved != null
+
+  // Called whenever the source document changes. Aborts any in-flight stream,
+  // otherwise its tokens would keep appending to the cleared rewrite.
+  function resetRewriteState() {
+    abortRef.current?.abort()
+    setRewrite('')
+    setError('')
+    setApproved(null)
+    setView('clinician')
+    setSubmitState('idle')
+    setSubmitError('')
+  }
 
   async function handleFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    setError('')
     try {
       const text = await extractText(file)
       setOriginal(text)
@@ -83,21 +80,12 @@ export default function App() {
     }
   }
 
-  function resetRewriteState() {
-    setRewrite('')
-    setStatus('idle')
-    setApproved(null)
-    setView('clinician')
-    setSubmitState('idle')
-    setSubmitError('')
-  }
-
   async function handleGenerate() {
     if (!original.trim() || isGenerating) return
     setError('')
     setRewrite('')
     setApproved(null)
-    setStatus('generating')
+    setIsGenerating(true)
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -110,12 +98,9 @@ export default function App() {
         signal: controller.signal,
         onToken: (delta) => setRewrite((prev) => prev + delta),
       })
-      setStatus('done')
     } catch (err) {
-      if (err.name === 'AbortError') {
-        setStatus(rewrite ? 'done' : 'idle')
-      } else {
-        setStatus('error')
+      // Stop button — keep whatever streamed in so far, it's still editable.
+      if (err.name !== 'AbortError') {
         setError(
           `${err.message}\n\nCheck that LM Studio is running with the server started ` +
             `(Developer tab → Start Server) at ${baseUrl}.`,
@@ -123,11 +108,8 @@ export default function App() {
       }
     } finally {
       abortRef.current = null
+      setIsGenerating(false)
     }
-  }
-
-  function handleCancel() {
-    abortRef.current?.abort()
   }
 
   function handleApprove() {
@@ -173,50 +155,23 @@ export default function App() {
     }
   }
 
-  function handleExport() {
-    if (!isApproved) return
-    downloadPatientPdf({
-      text: rewrite,
-      nurseName: approved.nurseName,
-      approvedAt: approved.at,
-    })
-  }
-
   if (view === 'patient') {
     return (
-      <div className="app">
-        <header className="app__header">
-          <div className="app__brand">
-            <span className="app__logo" aria-hidden="true">✚</span>
-            <div>
-              <h1>Nurse Notes</h1>
-              <p className="app__tagline">Patient view — what the patient sees on their phone</p>
-            </div>
-          </div>
-        </header>
+      <Shell tagline="Patient view — what the patient sees on their phone">
         <PatientView rewrite={rewrite} approved={approved} onBack={() => setView('clinician')} />
-        <footer className="app__footer">
-          Runs entirely on this device. No data leaves your machine.
-        </footer>
-      </div>
+      </Shell>
     )
   }
 
   return (
-    <div className="app">
-      <header className="app__header">
-        <div className="app__brand">
-          <span className="app__logo" aria-hidden="true">✚</span>
-          <div>
-            <h1>Nurse Notes</h1>
-            <p className="app__tagline">Clinician review — plain-language discharge summaries</p>
-          </div>
-        </div>
+    <Shell
+      tagline="Clinician review — plain-language discharge summaries"
+      action={
         <button className="link-btn" onClick={() => setShowSettings((s) => !s)}>
           {showSettings ? 'Hide settings' : 'Settings'}
         </button>
-      </header>
-
+      }
+    >
       {showSettings && (
         <div className="settings">
           <label>
@@ -309,9 +264,12 @@ export default function App() {
           </div>
           <div className="pane__toolbar">
             {isGenerating ? (
-              <button className="btn btn--sm btn--warn" onClick={handleCancel}>
-                Stop
-              </button>
+              <>
+                <button className="btn btn--sm btn--warn" onClick={() => abortRef.current?.abort()}>
+                  Stop
+                </button>
+                <span className="spinner" aria-label="Generating" />
+              </>
             ) : (
               <button
                 className="btn btn--sm btn--primary"
@@ -321,7 +279,6 @@ export default function App() {
                 {rewrite ? 'Regenerate' : 'Generate'}
               </button>
             )}
-            {isGenerating && <span className="spinner" aria-label="Generating" />}
           </div>
           <MarkdownEditor
             value={rewrite}
@@ -359,7 +316,16 @@ export default function App() {
             <button className="btn btn--ghost btn--lg" onClick={() => setView('patient')}>
               View on patient's phone
             </button>
-            <button className="btn btn--ghost btn--lg" onClick={handleExport}>
+            <button
+              className="btn btn--ghost btn--lg"
+              onClick={() =>
+                downloadPatientPdf({
+                  text: rewrite,
+                  nurseName: approved.nurseName,
+                  approvedAt: approved.at,
+                })
+              }
+            >
               Export patient PDF
             </button>
             {submitState === 'sent' ? (
@@ -380,10 +346,6 @@ export default function App() {
       </section>
 
       {submitError && <pre className="error">{submitError}</pre>}
-
-      <footer className="app__footer">
-        Runs entirely on this device. No data leaves your machine.
-      </footer>
-    </div>
+    </Shell>
   )
 }
