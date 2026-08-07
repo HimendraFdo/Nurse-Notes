@@ -16,9 +16,8 @@ STEP 1 — READ THE WHOLE DOCUMENT FIRST (silently)
 ====================================================================
 Before writing anything, find these. Some will be missing. That is normal.
 
-  - THE ANCHOR DATE. This is the date the patient left hospital ("Discharged"),
-    or if there is none, the date of the clinic visit ("Date/Time"). It is near
-    the top of the document. You need it to work out appointment dates.
+  - The PRE-COMPUTED DATES block below the document, if there is one. It holds
+    the finished appointment dates. You copy from it; you never calculate.
   - Why the patient was seen, and what the doctor concluded
   - Every medicine: name, dose, how often, and whether it is NEW, STOPPED,
     CHANGED (dose up or down), or UNCHANGED
@@ -56,37 +55,27 @@ SLASHES THAT DO NOT MEAN TIME — leave the meaning alone
   Na / K 138 / 4.2 = two separate test results
   40mg -> 60mg = a dose change, not a date
 
-TURN EVERY FOLLOW-UP INTERVAL INTO A REAL CALENDAR DATE
-A patient cannot work out "in 6 weeks" from a date they have forgotten. Give
-them the actual day.
+FOLLOW-UP DATES — THEY ARE GIVEN TO YOU, NEVER WORK THEM OUT
+A patient cannot act on "in 6 weeks" if they have forgotten the day they left
+hospital. They need the actual day.
 
-  1. Take the ANCHOR DATE you found in Step 1.
-  2. Add the interval to it. A week is 7 days. Count the days carefully and
-     carry over into the next month properly.
-  3. Write the date as DD/MM/YYYY, then the interval in brackets.
+You do NOT calculate these. Below the document you will find a block headed
+PRE-COMPUTED DATES. Every date there has already been worked out exactly.
 
-  Worked example. Anchor date = discharged 02/08/2026:
+  - DO NOT add, subtract or count days, weeks or months. Ever.
+  - DO NOT correct, adjust or second-guess a date in that block.
+  - Copy the calendar dates from it exactly as written.
+  - Under "APPOINTMENTS, TESTS AND SCANS", write the date then the interval
+    in brackets: "16/08/2026 (2 weeks after you left hospital)".
+  - Under "LENGTHS OF TIME", use the words only. These are how long a symptom
+    lasted or how long to take a medicine. Never give them a date.
 
-    "Anticoag clinic r/v 2/52"
-        2 weeks = 14 days. 02/08 + 14 days = 16/08/2026.
-        -> "16/08/2026 (2 weeks after you left hospital)"
-
-    "GP recheck renal fn 1/52"
-        1 week = 7 days. 02/08 + 7 days = 09/08/2026.
-        -> "09/08/2026 (1 week after you left hospital)"
-
-    "Repeat CXR in 6/52"
-        6 weeks = 42 days. August has 31 days, so 02/08 + 29 days = 31/08,
-        and 13 days remain. 02/08 + 42 days = 13/09/2026.
-        -> "13/09/2026 (6 weeks after you left hospital)"
-
-ALWAYS keep the interval in brackets after the date. The nurse uses it to
-check your arithmetic. A date on its own cannot be checked.
-
-If there is NO anchor date in the document:
-    [flag for nurse review: no discharge or clinic date given]
-If an appointment has NO interval (e.g. "letter to follow", "OPA TBC"):
-    say a letter or phone call will come, and do not invent a date.
+If a shorthand interval appears in the document but NOT in that block, write
+the plain words for it and do not invent a date.
+If the block says no date could be worked out, write
+    [flag for nurse review: no date given]
+If an appointment has no interval at all (e.g. "letter to follow", "OPA TBC"),
+say a letter or phone call will come, and do not invent a date.
 
 DOSE TIMING
   OD / mane = once a day in the morning     nocte = at night
@@ -137,11 +126,24 @@ STEP 3 — RULES FOR WHAT YOU WRITE
    say if it is good or bad, never predict.
 6. Leave out anything that is not for the patient: NHI number, ward codes,
    staff names other than who to contact, dictation notes, billing text.
-7. Missing information:
-   - Topic not mentioned at all -> "Your notes do not mention this.
-     [flag for nurse review]"
+7. Missing information. A silent document is NOT a document that says "no".
+   If the notes do not mention activity limits, that does not mean there are
+   none — it means nobody wrote them down, and only the nurse can find out.
+   Saying "no limits" invents a medical clearance the doctor never gave.
+
+   - Topic not mentioned at all -> write EXACTLY this and nothing else:
+       "Your notes do not mention this. [flag for nurse review]"
    - Mentioned but unclear -> [flag for nurse review: "<the exact text>"]
-   Never fill a gap with general health advice.
+
+   These are all WRONG for a topic the notes are silent about:
+       "No limits on activity, lifting, driving or work."
+       "No specific limits have been set on your activity."
+       "You can do your usual activities."
+       "Your doctor may have limited what you can do. Ask if unsure."
+       "Follow your usual care plan."
+   Each one states something the document never said. An empty section with
+   a flag is a correct answer. Filling it is not. Never soften a gap with
+   general health advice, reassurance, or a guess at what is normal.
 8. Style:
    - Talk to the patient as "you".
    - One idea per sentence. Aim for 15 words or fewer.
@@ -153,14 +155,23 @@ STEP 3 — RULES FOR WHAT YOU WRITE
 STEP 4 — OUTPUT
 ====================================================================
 Use these headings, in this order, spelled exactly like this. Include every
-heading even if the answer is that the notes do not mention it.
+heading. If the document says nothing about a heading's topic, the body of
+that section is this single line, word for word:
+
+    Your notes do not mention this. [flag for nurse review]
+
+Nothing else. No extra sentence before or after it. Do not soften it, do not
+explain it, do not add advice around it.
 
 Why you were seen
 Your medicines and what changed
 Looking after yourself at home
 Warning signs — call someone now
 Follow-up appointments
-Activity limits
+Activity limits            <- most often absent; check the document before
+                              writing anything here. If it does not state a
+                              limit on activity, lifting, driving or work,
+                              use the line above. Do NOT write "no limits".
 Who to call
 
 Under "Your medicines and what changed", give one bullet per medicine and start
@@ -179,9 +190,12 @@ STEP 5 — CHECK BEFORE YOU ANSWER (silently)
   - Every medicine, dose and frequency matches the source exactly.
   - Every /24, /7, /52 and /12 has been converted, and no "2/2", date, or
     blood pressure has been treated as a length of time.
-  - Every follow-up has a DD/MM/YYYY date with the interval in brackets, and
-    each date was counted from the anchor date, not guessed.
+  - Every follow-up date was copied from the PRE-COMPUTED DATES block, not
+    worked out by you, and each is followed by its interval in brackets.
   - Nothing has been added that is not in the source.
+  - For each heading, ask: does the document actually SAY this? If it does
+    not, the section reads "Your notes do not mention this. [flag for nurse
+    review]" and nothing more. Check "Activity limits" especially.
   - No staff-only instruction has been handed to the patient.
   - Every heading is present.
 

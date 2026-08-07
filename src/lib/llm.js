@@ -1,6 +1,7 @@
 // Talks to the local LM Studio server (OpenAI-compatible). Streams tokens
 // so the rewrite fills in progressively. No API key needed locally.
 import SYSTEM_PROMPT from '../../prompts/system-prompt.txt?raw'
+import { buildDateBrief } from './dates.js'
 
 export { SYSTEM_PROMPT }
 
@@ -25,6 +26,12 @@ export async function generateRewrite({
   temperature = 0.25,
   signal,
 } = {}) {
+  // Resolve every follow-up interval to a real date before the model sees the
+  // document, and append the results. The model copies these rather than
+  // counting days, which it does unreliably at this size.
+  const dateBrief = buildDateBrief(originalText)
+  const userContent = dateBrief ? `${originalText}\n\n${dateBrief}` : originalText
+
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -35,7 +42,7 @@ export async function generateRewrite({
       stream: true,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: originalText },
+        { role: 'user', content: userContent },
       ],
     }),
   })
